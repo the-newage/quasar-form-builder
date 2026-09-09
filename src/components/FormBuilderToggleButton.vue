@@ -1,98 +1,152 @@
 <template>
-  <div class="form-builder-ToggleButton"
-       :class="customClass">
-    <div v-if="label"
-         class="outsideLabel">{{ label }}</div>
-    <q-btn-toggle v-model="inputData"
-                  :name="name"
-                  :push="push"
-                  :glossy="glossy"
-                  :options="options"
-                  :color="color"
-                  :inline="inline"
-                  :dense="dense"
-                  :type="type"
-                  :disable="disable"
-                  :readonly="readonly"
-                  :text-color="textColor"
-                  :toggle-color="toggleColor"
-                  :toggle-text-color="toggleTextColor"
-                  :unelevated="unelevated"
-                  :flat="flat"
-                  :outlined="outlined"
-                  :rounded="rounded"
-                  :size="size"
-                  :ripple="ripple"
-                  :no-caps="noCaps"
-                  :no-wrap="noWrap"
-                  :spread="spread"
-                  :stack="stack"
-                  :stretch="stretch"
-                  @update:model-value="change($event)"
-                  @click="onClick" />
+  <div
+      class="form-builder-toggle-button"
+      :class="customClass"
+  >
+    <div
+        v-if="outsideLabel || label"
+        class="outside-label"
+    >
+      {{ outsideLabel || label }}
+    </div>
+
+    <q-btn-toggle
+        ref="inputRef"
+        v-bind="qBtnToggleAttrs"
+        :model-value="model"
+        :class="customClass"
+        @update:model-value="model = $event"
+        @click="onClick"
+    />
   </div>
 </template>
 
-<script>
-import inputMixin from '../mixins/inputMixin.js'
-export default {
+<script setup lang="ts">
+import { computed, ref, useAttrs } from 'vue'
+
+defineOptions({
   name: 'FormBuilderToggleButton',
-  mixins: [inputMixin],
-  props: {
-    name: {
-      default: '',
-      type: String
-    },
-    value: {
-      default: '',
-      type: [Object, String, Array, Number, Boolean]
-    },
-    toggleTextColor: {
-      default: 'black',
-      type: [String]
-    },
-    toggleColor: {
-      default: 'primary',
-      type: [String]
-    },
-    push: {
-      default: false,
-      type: [Boolean]
-    },
-    glossy: {
-      default: false,
-      type: [Boolean]
-    },
-    clearable: {
-      default: false,
-      type: [Boolean]
-    },
-    unelevated: {
-      default: false,
-      type: [Boolean]
-    },
-    stretch: {
-      default: false,
-      type: [Boolean]
-    },
-    stack: {
-      default: false,
-      type: [Boolean]
-    },
-    spread: {
-      default: false,
-      type: [Boolean]
-    },
-    noWrap: {
-      default: false,
-      type: [Boolean]
-    },
-    noCaps: {
-      default: false,
-      type: [Boolean]
+  inheritAttrs: false
+})
+
+type ToggleValue =
+    | string
+    | number
+    | boolean
+    | Record<string, any>
+    | Array<string | number | boolean | Record<string, any>>
+    | null
+
+interface Props {
+  customClass?: string
+  label?: string
+  outsideLabel?: string
+  modelValue?: ToggleValue
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  customClass: '',
+  label: '',
+  outsideLabel: '',
+  modelValue: null
+})
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: ToggleValue): void
+  (e: 'change', value: ToggleValue): void
+  (e: 'click'): void
+}>()
+
+const inputRef = ref<any>(null)
+
+const attrs = useAttrs()
+
+/**
+ * Attributes that can be passed directly to QBtnToggle.
+ */
+const allowedQBtnToggleAttrs = new Set([
+  'name',
+  'loading',
+
+  'options',
+
+  'color',
+  'textColor',
+
+  'toggleColor',
+  'toggleTextColor',
+
+  'push',
+  'glossy',
+
+  'clearable',
+
+  'inline',
+  'dense',
+
+  'type',
+
+  'disable',
+  'readonly',
+
+  'unelevated',
+  'flat',
+  'outlined',
+
+  'rounded',
+
+  'size',
+
+  'ripple',
+
+  'noCaps',
+  'noWrap',
+
+  'spread',
+  'stack',
+  'stretch',
+
+  'dark'
+])
+
+const qBtnToggleAttrs = computed(() => {
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(attrs)) {
+    if (allowedQBtnToggleAttrs.has(key)) {
+      result[key] = value
     }
   }
+
+  return result
+})
+
+const model = computed<ToggleValue>({
+  get: () => props.modelValue ?? null,
+
+  set: (value) => {
+    emitModelUpdate(value)
+  }
+})
+
+const emitModelUpdate = (value: ToggleValue) => {
+  emit('update:modelValue', value)
+  emit('change', value)
+}
+
+const onClick = () => {
+  emit('click')
 }
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.form-builder-toggle-button {
+  width: 100%;
+}
+
+.outside-label {
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+</style>

@@ -1,214 +1,229 @@
 <template>
-  <div class="form-builder-select"
-       :class="customClass">
-    <div class="outsideLabel">{{ placeholder ? label : null }}</div>
-    <q-select ref="input"
-              v-model="inputData"
-              transition-show="jump-down"
-              transition-hide="jump-up"
-              :name="name"
-              :filled="filled"
-              :behavior="behavior"
-              :rounded="rounded"
-              :outlined="outlined"
-              :error="error"
-              :error-message="errorMessage"
-              :option-value="optionValue"
-              :option-label="optionLabel"
-              :option-disable="optionDisable"
-              :options="filteredOptions"
-              :label="placeholder ? null : label"
-              :stack-label="!!placeholder"
-              :placeholder="placeholderSetter"
-              :rules="rules"
-              :icon="icon"
-              :lazy-rules="lazyRules"
-              :multiple="multiple"
-              :use-chips="useChips"
-              :new-value-mode="newValueMode"
-              use-input
-              input-debounce="500"
-              :disable="disable"
-              :readonly="readonly"
-              :class="customClass"
-              :popup-content-class="customClass"
-              :input-class="customClass"
-              emit-value
-              :hide-dropdown-icon="hideDropdownIcon"
-              :dropdown-icon="dropdownIcon"
-              map-options
-              :clearable="clearable"
-              @update:model-value="change($event)"
-              @new-value="createValue"
-              @filter="filterFn"
-              @click="onClick">
-      <template #no-option>
-        <q-item v-if="!createNewValue"
-                v-show="showNoOption">
-          <q-item-section class="text-grey"> موردی یافت نشد </q-item-section>
-        </q-item>
-      </template>
-    </q-select>
+  <div
+      class="form-builder-select"
+      :class="customClass"
+  >
+    <div
+        v-if="outsideLabel"
+        class="outside-label"
+    >
+      {{ outsideLabel }}
+    </div>
+    <q-select
+        ref="inputRef"
+        v-bind="qSelectAttrs"
+        :model-value="model"
+        :options="filteredOptions"
+        :class="customClass"
+        use-input
+        emit-value
+        map-options
+        input-debounce="500"
+        @update:model-value="model = $event"
+        @new-value="createValue"
+        @filter="filterFn"
+        @click="onClick"
+    />
   </div>
 </template>
 
-<script>
-import inputMixin from '../mixins/inputMixin.js'
-export default {
+<script setup lang="ts">
+import { computed, ref, useAttrs, watch } from 'vue'
+
+defineOptions({
   name: 'FormBuilderSelect',
-  mixins: [inputMixin],
-  props: {
-    name: {
-      default: '',
-      type: String
-    },
-    value: {
-      default: () => [],
-      type: [Array, Object, String, Number, Boolean]
-    },
-    options: {
-      default: () => [],
-      type: Array
-    },
-    optionDisable: {
-      default: 'disable',
-      type: String
-    },
-    newValueMode: {
-      default: undefined,
-      type: String
-      // validator(value) {
-      //   return ['add' | 'add-unique' | 'toggle' | undefined].includes(value)
-      // }
-    },
-    clearable: {
-      default: true,
-      type: Boolean
-    },
-    hideDropdownIcon: {
-      default: false,
-      type: Boolean
-    },
-    dropdownIcon: {
-      default: 'arrow_drop_down',
-      type: String
-    },
-    showNoOption: {
-      default: true,
-      type: Boolean
-    },
-    filled: {
-      default: false,
-      type: Boolean
-    },
-    rounded: {
-      default: false,
-      type: Boolean
-    },
-    outlined: {
-      default: false,
-      type: Boolean
-    },
-    onChangeValue: {
-      default: (newValue, oldValue) => {
-      },
-      type: Function
+  inheritAttrs: false
+})
+
+type SelectValue =
+    | string
+    | number
+    | boolean
+    | Record<string, any>
+    | Array<string | number | boolean | Record<string, any>>
+    | null
+
+interface SelectOption {
+  [key: string]: any
+}
+
+interface Props {
+  customClass?: string
+  createNewValue?: boolean
+  modelValue?: SelectValue
+  options?: SelectOption[]
+  outsideLabel?: string
+  onChangeValue?: (
+      newValue: SelectValue,
+      oldValue: SelectValue
+  ) => void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: null,
+  name: '',
+  options: () => [],
+  rules: () => [],
+  outsideLabel: '',
+  createNewValue: false,
+  onChangeValue: () => {}
+})
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: SelectValue): void
+  (e: 'change', value: SelectValue): void
+  (e: 'click'): void
+}>()
+
+const inputRef = ref<any>(null)
+
+const attrs = useAttrs()
+
+const filteredOptions = ref<SelectOption[]>([
+  ...props.options
+])
+
+/**
+ * Attributes that can be passed directly to QSelect.
+ */
+const allowedQSelectAttrs = new Set([
+  'optionLabel',
+  'optionValue',
+  'optionDisable',
+  'loading',
+
+  'dense',
+  'borderless',
+  'standout',
+  'dark',
+
+  'label',
+  'stackLabel',
+  'hint',
+  'hideHint',
+  'hideBottomSpace',
+
+  'color',
+  'bgColor',
+  'labelColor',
+
+  'loading',
+
+  'counter',
+  'hideSelected',
+
+  'popupContentStyle',
+
+  'autocomplete',
+
+  'virtualScrollSliceSize',
+  'virtualScrollSliceRatioBefore',
+  'virtualScrollSliceRatioAfter'
+])
+
+const qSelectAttrs = computed(() => {
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(attrs)) {
+    if (allowedQSelectAttrs.has(key)) {
+      result[key] = value
     }
-  },
-  data() {
-    return {
-      model: null,
-      filteredOptions: this.options
-    }
-  },
-  computed: {
-    placeholderSetter() {
-      if (this.inputData === null) {
-        return this.placeholder
-      }
-      // in single select after setting value,
-      // v-model type changes to string
-      if (typeof this.inputData === 'string') {
-        return ''
-      }
-      // in the multiple scenario, inputData type changes to Array!
-      if (this.multiple) {
-        if (this.inputData.length === 0) {
-          return this.placeholder
-        }
-        return ''
-      }
-      // be an object
-      if (Object.keys(this.inputData).length === 0) {
-        return this.placeholder
-      }
-      return ''
-    }
-  },
-  watch: {
-    inputData(newValue, oldValue) {
-      this.onChangeValue(newValue, oldValue)
+  }
+
+  return result
+})
+
+const model = computed<SelectValue>({
+  get: () => props.modelValue ?? null,
+
+  set: (value) => {
+    emitModelUpdate(value)
+  }
+})
+
+const emitModelUpdate = (value: SelectValue) => {
+  const oldValue = props.modelValue ?? null
+
+  props.onChangeValue(value, oldValue)
+
+  emit('update:modelValue', value)
+  emit('change', value)
+}
+
+watch(
+    () => props.options,
+    (newOptions) => {
+      filteredOptions.value = [...newOptions]
     },
-    options: {
-      handler(newValue) {
-        this.filteredOptions = newValue
-      },
+    {
       immediate: true,
       deep: true
     }
-  },
-  methods: {
-    filterFn(val, update) {
-      const isObjectList =
-          this.options.length > 0 && typeof this.options[0] === 'object'
+)
 
-      if (val === '') {
-        update(() => {
-          this.filteredOptions = this.options
-        })
-        return
-      }
+const filterFn = (
+    val: string,
+    update: (callback: () => void) => void
+) => {
+  const options = props.options
 
-      update(() => {
-        const needle = val.toLowerCase()
-        this.filteredOptions = this.options.filter((v) => {
-          const itemLabel = isObjectList ? v[this.optionLabel] : v
-          return itemLabel.toString().toLowerCase().indexOf(needle) > -1
-        })
-      })
-    },
-    createValue(val, done) {
-      if (!this.createNewValue) {
-        return
-      }
-      // Calling done(var) when new-value-mode is not set or "add", or done(var, "add") adds "var" content to the model
-      // and it resets the input textbox to empty string
-      // ----
-      // Calling done(var) when new-value-mode is "add-unique", or done(var, "add-unique") adds "var" content to the model
-      // only if is not already set
-      // and it resets the input textbox to empty string
-      // ----
-      // Calling done(var) when new-value-mode is "toggle", or done(var, "toggle") toggles the model with "var" content
-      // (adds to model if not already in the model, removes from model if already has it)
-      // and it resets the input textbox to empty string
-      // ----
-      // If "var" content is undefined/null, then it doesn't tampers with the model
-      // and only resets the input textbox to empty string
+  const isObjectList =
+      options.length > 0 &&
+      typeof options[0] === 'object'
 
-      // mr kerasus : why im wrote this code?
-      // if (val.length > 0) {
-      //   if (!this.filteredOptions.includes(val)) {
-      //     this.filteredOptions.push(val);
-      //   }
-      //   done(val, 'toggle');
-      // }
-      done(val, this.newValueMode)
-    },
-    test() {
-      this.inputData = []
-    }
+  if (!val) {
+    update(() => {
+      filteredOptions.value = [...options]
+    })
+
+    return
   }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    const optionLabel = typeof attrs.optionLabel === 'string'
+        ? attrs.optionLabel
+        : undefined
+    filteredOptions.value = options.filter((option) => {
+      const itemLabel = isObjectList
+          ? optionLabel ? option[optionLabel] : ''
+          : option
+
+      return String(itemLabel)
+          .toLowerCase()
+          .includes(needle)
+    })
+  })
+}
+
+const createValue = (
+    value: string,
+    done: (
+        value?: any,
+        mode?: 'add' | 'add-unique' | 'toggle'
+    ) => void
+) => {
+  if (!props.createNewValue) {
+    done()
+    return
+  }
+
+  done(value, attrs.newValueMode)
+}
+
+const onClick = () => {
+  emit('click')
 }
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.form-builder-select {
+  position: relative;
+
+  .outside-label {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+</style>

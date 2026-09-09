@@ -47,6 +47,47 @@ Also, if you have a form you want to update, you can import it in generator and 
 
 ## Features:
 
+### Outside label (`outsideLabel`) prop
+
+A new optional prop `outsideLabel` (type: String) is supported by many form input components. When provided, the component renders an external label element above the input using the CSS class `outside-label`. Example in a component template:
+
+```vue
+<div v-if="outsideLabel" class="outside-label">{{ outsideLabel }}</div>
+```
+
+This prop is useful when you want to show a label outside (above) the input instead of using the component's internal `label` or `stackLabel` behavior.
+
+Currently supported components (in `src/components`):
+
+- FormBuilderInput
+- FormBuilderInputEditor
+- FormBuilderSelect
+- FormBuilderCheckbox
+- FormBuilderColor
+- FormBuilderDate
+- FormBuilderDateTime
+- FormBuilderTime
+- FormBuilderSlider
+- FormBuilderRangeSlider
+- FormBuilderOptionGroup
+- FormBuilderFile
+- FormBuilderTiptapEditor
+- FormBuilderToggleButton
+- FormBuilderButton
+
+Usage example (inside FormBuilder JSON or component props):
+
+```json
+{
+  "type": "Input",
+  "outsideLabel": "External label text",
+  "label": "Field label (optional)"
+}
+```
+
+Styling: the class used is `outside-label`. You can override or extend it in your styles (the components include a simple default margin and font-size).
+
+
 - ### FormBuilder
 
 | props   | default | type    |
@@ -277,4 +318,66 @@ export default {
   },
 };
 </script>
+
+## Playground / Example (from dev/App.vue)
+
+The repository includes a development playground at `dev/App.vue` which demonstrates how to wire up and interact with `FormBuilder`. Below are the common integration points shown in the playground.
+
+- Provide the inputs schema via `v-model:inputs` (an array describing each field).
+- Bind current values via `v-model:formData` (an object populated as the user interacts).
+- Control global states using `:readonly`, `:disable`, and `:loading` props on the `FormBuilder` component.
+- Use a template `ref` (`ref="formBuilderRef"`) to call helper methods exposed by the FormBuilder instance:
+  - `getNormalizedFormData(inputs)` — returns a normalized/flattened form data object based on the inputs schema.
+  - `clearValues()` — clear/reset form values programmatically.
+- Listen to `@inputClick` and `@keydown` events to react to input interactions.
+- Register custom components as input types by passing a `shallowRef` to the `type` field of an input item.
+
+Simplified example inspired by `dev/App.vue`:
+
+```vue
+<template>
+  <form-builder
+    ref="formBuilderRef"
+    v-model:inputs="inputs"
+    v-model:formData="formData"
+    :readonly="readonly"
+    :disable="disable"
+    :loading="loading"
+    @inputClick="onClick"
+    @keydown="onKeyPress" />
+</template>
+
+<script setup>
+import { ref, shallowRef } from 'vue'
+import FormBuilder from './src/FormBuilder.vue'
+import CustomComponent from './dev/components/CustomComponent.vue'
+
+const formBuilderRef = ref(null)
+const CustomComponentInput = shallowRef(CustomComponent)
+
+const inputs = ref([
+  { type: 'file', label: 'just capture', multiple: true, clearable: true },
+  { type: 'select', name: 'question_type', options: [ { label: 'konkur', value: 'konkur' } ] },
+  { type: 'submit', label: 'submit btn' },
+  { type: CustomComponentInput, props: { name: 'ali' }, name: 'ali', label: 'شناسه علی' },
+  { type: 'date', name: 'last_modification_time', label: 'required date with label' }
+])
+
+const formData = ref({})
+
+const getData = () => {
+  console.log('Form Data Object: ', formData.value)
+  if (formBuilderRef.value) {
+    console.log('Normalized Form Data:', formBuilderRef.value.getNormalizedFormData(inputs.value))
+  }
+}
+
+const clearInputValues = () => {
+  if (formBuilderRef.value) formBuilderRef.value.clearValues()
+}
+</script>
+```
+
+The dev playground also shows several utility controls (buttons) such as: get data, clear inputs, toggle `loading`, toggle `readonly`/`disable`, and change screen `dir` between `ltr` and `rtl`.
+
 ```

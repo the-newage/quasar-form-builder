@@ -1,140 +1,174 @@
 <template>
-  <div class="form-builder-separator"
-       :class="customClass">
-    <b v-if="label">
-      {{ label }}
+  <div
+      class="form-builder-separator"
+      :class="customClass"
+  >
+    <b
+        v-if="outsideLabel || label"
+        class="separator-label"
+    >
+      {{ outsideLabel || label }}
     </b>
-    <q-separator v-if="hasSize"
-                 class="separator-default-style"
-                 :name="name"
-                 :style="{ 'border-top': borderTopStyle, 'border-left': borderLeftStyle }"
-                 :class="[customClass ,[(vertical) ? 'separator-vertical' : 'separator-horizontal']]"
-                 :vertical="vertical"
-                 :inset="inset"
-                 :spaced="spaced"
-                 :size="size"
-                 :dark="darkMode" />
+
+    <q-separator
+        v-if="hasSize"
+        v-bind="qSeparatorAttrs"
+        class="separator-default-style"
+        :class="[
+          customClass,
+          vertical
+              ? 'separator-vertical'
+              : 'separator-horizontal'
+        ]"
+        :style="separatorStyle"
+    />
   </div>
 </template>
 
-<script>
-import inputMixin from '../mixins/inputMixin.js'
+<script setup lang="ts">
+import { computed, useAttrs } from 'vue'
 
-export default {
+defineOptions({
   name: 'FormBuilderSeparator',
-  mixins: [inputMixin],
-  props: {
-    name: {
-      default: '',
-      type: String
-    },
-    color: {
-      type: String,
-      default() {
-        return 'dark'
-      }
-    },
-    size: {
-      type: String,
-      default() {
-        return '1px'
-      }
-    },
-    darkMode: {
-      type: Boolean,
-      default() {
-        return false
-      }
-    },
-    vertical: {
-      type: Boolean,
-      default() {
-        return false
-      }
-    },
-    label: {
-      type: String,
-      default() {
-        return ''
-      }
-    },
-    spaced: {
-      type: [String, Boolean],
-      default() {
-        return false
-      }
-    },
-    separatorType: {
-      type: String,
-      default() {
-        return 'solid'
-      }
-    },
-    borderSize: {
-      type: String,
-      default() {
-        return ''
-      }
-    },
-    inset: {
-      type: [String, Boolean],
-      default() {
-        return false
-      }
-    }
-  },
-  data() {
-    return {
-      colorTypes: ['#', 'rgb', 'rgba']
-    }
-  },
-  computed: {
-    hasSize() {
-      return this.size && (this.size !== '0') && (this.size !== '0px')
-    },
-    borderTopStyle() {
-      return this.getBorderStyle('top')
-    },
-    borderLeftStyle() {
-      return this.getBorderStyle('left')
-    },
-    getSeparatorColor() {
-      if (
-        this.colorTypes
-          .map((item) => this.color.includes(item))
-          .filter((item) => !!item).length > 0
-      ) {
-        return this.color
-      }
-      return 'var(--q-' + this.color + ')'
-    }
-  },
-  methods: {
-    getBorderStyle(type) {
-      let style = ''
-      if (
-        ((type === 'top' && !this.vertical) ||
-          (type === 'left' && this.vertical)) &&
-        this.separatorType &&
-        this.size
-      ) {
-        style =
-          this.size + ' ' + this.separatorType + ' ' + this.getSeparatorColor
-      }
-      return style
+  inheritAttrs: false
+})
+
+type SpacingValue = boolean | string
+
+interface Props {
+  customClass?: string
+
+  label?: string
+  outsideLabel?: string
+
+  color?: string
+
+  size?: string | number
+
+  vertical?: boolean
+
+  spaced?: SpacingValue
+
+  inset?: SpacingValue
+
+  separatorType?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  customClass: '',
+  label: '',
+  outsideLabel: '',
+  color: 'dark',
+  size: '1px',
+  vertical: false,
+  spaced: false,
+  inset: false,
+  separatorType: 'solid'
+})
+
+const attrs = useAttrs()
+
+/**
+ * Attributes that can be passed directly to QSeparator.
+ */
+const allowedQSeparatorAttrs = new Set([
+  'dark',
+  'vertical',
+  'loading',
+  'inset',
+  'spaced',
+  'size',
+  'color'
+])
+
+const qSeparatorAttrs = computed(() => {
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(attrs)) {
+    if (allowedQSeparatorAttrs.has(key)) {
+      result[key] = value
     }
   }
-}
+
+  return result
+})
+
+const normalizedSize = computed(() => {
+  const size = props.size
+
+  if (typeof size === 'number') {
+    return `${size}px`
+  }
+
+  return size
+})
+
+const hasSize = computed(() => {
+  const size = normalizedSize.value
+
+  return Boolean(
+      size &&
+      size !== '0' &&
+      size !== '0px'
+  )
+})
+
+const separatorColor = computed(() => {
+  const color = props.color
+
+  if (!color) {
+    return 'var(--q-dark)'
+  }
+
+  const isCustomColor =
+      color.startsWith('#') ||
+      color.startsWith('rgb') ||
+      color.startsWith('hsl') ||
+      color.startsWith('var(')
+
+  if (isCustomColor) {
+    return color
+  }
+
+  return `var(--q-${color})`
+})
+
+const borderStyle = computed(() => {
+  return `${normalizedSize.value} ${props.separatorType} ${separatorColor.value}`
+})
+
+const separatorStyle = computed(() => {
+  if (props.vertical) {
+    return {
+      borderLeft: borderStyle.value
+    }
+  }
+
+  return {
+    borderTop: borderStyle.value
+  }
+})
 </script>
 
 <style scoped lang="scss">
+.form-builder-separator {
+  width: 100%;
+}
+
+.separator-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
 .separator-default-style {
   background: none;
 }
+
 .separator-horizontal {
   min-height: 0 !important;
   height: 0 !important;
 }
+
 .separator-vertical {
   min-width: 1px !important;
 }
