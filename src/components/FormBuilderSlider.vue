@@ -25,7 +25,7 @@
         :readonly="readonly"
         :class="customClass"
         :marker-labels-class="customClass"
-        @update:model-value="model = $event"
+        @update:model-value="model = $event ?? 0"
         @click="onClick"
     />
   </div>

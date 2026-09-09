@@ -70,6 +70,7 @@
 <script setup lang="ts">
 import { ref, shallowRef, watch, onMounted } from 'vue'
 import FormBuilder from '../src/FormBuilder.vue'
+import { type FormInputItem } from 'vue-form-builder-core'
 import CustomComponent from './components/CustomComponent.vue'
 // import GeneratorPanel from './components/GeneratorPanel/GeneratorPanel.vue'
 
@@ -85,8 +86,9 @@ const loading = ref(false)
 
 const formData = ref<Record<string, any>>({})
 
-const inputs = ref<any[]>([
+const inputs = ref<FormInputItem[]>([
   {
+    name: 'inputFile',
     type: 'file',
     capture: 'user',
     accept: '*',
@@ -109,11 +111,13 @@ const inputs = ref<any[]>([
     col: 'col-12'
   },
   {
+    name: 'submit',
     type: 'submit',
     label: 'submit btn',
     col: 'col-12'
   },
   {
+    name: 'separator',
     type: 'separator',
     color: 'secondary',
     size: '1px',
@@ -139,6 +143,7 @@ const inputs = ref<any[]>([
     }
   },
   {
+    name: 'separator',
     type: 'separator',
     color: 'secondary',
     size: '3px',
@@ -196,6 +201,7 @@ const inputs = ref<any[]>([
   },
   { type: 'checkbox', name: 'enable', label: 'فعال', col: 'col-md-3' },
   {
+    name: 'separator',
     type: 'separator',
     color: 'secondary',
     size: '3px',
@@ -203,6 +209,7 @@ const inputs = ref<any[]>([
     col: 'col-md-12'
   },
   {
+    name: 'separator',
     type: 'separator',
     color: 'accent',
     size: '3px',
@@ -227,6 +234,7 @@ const inputs = ref<any[]>([
     col: 'col-md-6'
   },
   {
+    name: 'separator',
     type: 'separator',
     color: 'negative',
     size: '3px',

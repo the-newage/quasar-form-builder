@@ -15,6 +15,7 @@
         v-bind="qBtnToggleAttrs"
         :model-value="model"
         :class="customClass"
+        :options="options"
         @update:model-value="model = $event"
         @click="onClick"
     />
@@ -38,6 +39,7 @@ type ToggleValue =
     | null
 
 interface Props {
+  options: any[]
   customClass?: string
   label?: string
   outsideLabel?: string

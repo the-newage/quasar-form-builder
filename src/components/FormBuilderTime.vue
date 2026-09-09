@@ -17,7 +17,6 @@
         readonly
         dir="ltr"
         :disable="isDisabled"
-        :label="placeholder ? null : label"
         :stack-label="!!placeholder"
         :placeholder="placeholder"
         :class="customClass"
@@ -158,6 +157,7 @@ const displayTime = computed(() => {
 
 const allowedQInputAttrs = new Set([
   'name',
+  'label',
 
   'loading',
   'filled',
@@ -248,7 +248,10 @@ const onClickInput = (event: MouseEvent) => {
   emit('click', event)
 }
 
-const onChangeTime = (newValue: string) => {
+const onChangeTime = (newValue: string | null) => {
+  if (!newValue) {
+    return
+  }
   time.value = newValue
 
   const timeWithoutSecond = newValue

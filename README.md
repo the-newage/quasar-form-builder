@@ -14,36 +14,37 @@ To use it in vue files, you need to import the component you want and use it lik
 
 ```vue
 <template>
-  <form-builder />
+  <form-builder v-model:inputs="inputs"
+                v-model:formData="formData"
+                :readonly="readonly"
+                :disable="disable"
+                :loading="loading"
+                @inputClick="onClick"
+                @keydown="onKeyPress" />
 </template>
 
-<script>
+<script setup lang="ts">
+import { type FormInputItem } from 'quasar-form-builder'
 import { FormBuilder } from 'quasar-form-builder';
-export default {
-  components: { FormBuilder },
-};
+
+const inputs = ref<FormInputItem[]>([])
+const formData = ref<Record<string, any>>({})
+
+const readonly = ref(false)
+const disable = ref(false)
+const loading = ref(false)
+
+const onClick = (data: any) => {
+  console.log('data clicked:', data)
+}
+
+const onKeyPress = (data: any) => {
+  console.log('key press:', data)
+}
 </script>
 ```
 
-## Generator
-
-Generator is a visual way to make forms to use in form builder. You can build your forms using generator and then import the json generated to your project. to use it in your project, just import it and use it like so:
-
-```vue
-<template>
-  <form-builder-generator />
-</template>
-
-<script>
-import { FormBuilderGenerator } from 'quasar-form-builder';
-export default {
-  components: { FormBuilderGenerator },
-};
-</script>
-```
-
-Then after building your form, you can copy the json of the form, and use it in your project.
-Also, if you have a form you want to update, you can import it in generator and work on it.
+<!-- Generator removed: see dev/App.vue playground example -->
 
 ## Features:
 
@@ -378,6 +379,42 @@ const clearInputValues = () => {
 </script>
 ```
 
+
 The dev playground also shows several utility controls (buttons) such as: get data, clear inputs, toggle `loading`, toggle `readonly`/`disable`, and change screen `dir` between `ltr` and `rtl`.
 
+## API / Instance Methods
+
+When you hold a `ref` to the `FormBuilder` component instance (for example `ref="formBuilderRef"`), the playground demonstrates calling these helpers:
+
+- `getNormalizedFormData(inputs)` — returns a normalized form data object based on the provided `inputs` schema.
+- `clearValues()` — clears or resets all input values managed by the `FormBuilder` instance.
+
+Example usage:
+
+```js
+if (formBuilderRef.value) {
+  formBuilderRef.value.clearValues()
+  const normalized = formBuilderRef.value.getNormalizedFormData(inputs.value)
+}
 ```
+
+## Events
+
+The `FormBuilder` emits a few useful events demonstrated in the playground:
+
+- `@inputClick` — emitted when an input is clicked.
+- `@keydown` — emitted for keyboard interactions inside inputs.
+
+Bind handlers directly on the component like:
+
+```vue
+<form-builder @inputClick="onClick" @keydown="onKeyPress" />
+```
+
+## Notes from the playground
+
+- Use `v-model:inputs` to supply the inputs schema array.
+- Use `v-model:formData` to two-way bind form values.
+- Control global presentation/interaction via `:readonly`, `:disable`, and `:loading` props.
+- Provide custom input components by assigning a `shallowRef` to the `type` field of an input (see the playground `CustomComponentInput`).
+

@@ -73,12 +73,4 @@ const onClick = (event: Event) => {
 
   emit('click', event)
 }
-
-const onKeyPress = (event: KeyboardEvent) => {
-  if (isDisabled.value) {
-    return
-  }
-
-  emit('keypress', event)
-}
 </script>

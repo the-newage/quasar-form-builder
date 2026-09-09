@@ -19,7 +19,7 @@
         v-if="!isDisabled"
         ref="inputRef"
         v-bind="qEditorAttrs"
-        v-model="model"
+        :model-value="model"
         :class="customClass"
         :content-class="customClass"
         :dense="$q.screen.lt.md"
@@ -46,7 +46,7 @@ defineOptions({
   inheritAttrs: false
 })
 
-type EditorValue = string | number | boolean | null
+type EditorValue = string
 
 interface Props {
   modelValue?: EditorValue

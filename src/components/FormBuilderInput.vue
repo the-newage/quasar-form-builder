@@ -33,7 +33,7 @@ defineOptions({
   inheritAttrs: false
 })
 
-type InputValue = string | number | boolean | null
+type InputValue = string | number | null
 
 interface Props {
   modelValue?: InputValue

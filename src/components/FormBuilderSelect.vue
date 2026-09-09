@@ -207,8 +207,14 @@ const createValue = (
     done()
     return
   }
+  const newValueMode =
+      attrs.newValueMode === 'add' ||
+      attrs.newValueMode === 'toggle' ||
+      attrs.newValueMode === 'add-unique'
+          ? attrs.newValueMode
+          : undefined
 
-  done(value, attrs.newValueMode)
+  done(value, newValueMode)
 }
 
 const onClick = () => {
