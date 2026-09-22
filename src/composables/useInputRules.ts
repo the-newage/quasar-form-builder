@@ -1,4 +1,4 @@
-import { computed, inject } from 'vue'
+import {computed, inject, toValue} from 'vue'
 import { all as allVeeValidations } from '@vee-validate/rules'
 
 export interface ValidationConfig {
@@ -17,6 +17,7 @@ export const createFormBuilderValidation = (config: ValidationConfig = {}) => {
     const getTranslation = config.i18n || ((key: string) => key)
 
     function getRuleTranslation (ruleName: string, ruleParams: any[], fieldName: string) {
+        debugger
         const translatedFieldName = !fieldName ? '-' : getTranslation(fieldName)
         const validationParamsForTranslation = getRuleParamsForTranslation(ruleName, ruleParams)
         const translationParams = { field: translatedFieldName, ...validationParamsForTranslation }
@@ -27,33 +28,34 @@ export const createFormBuilderValidation = (config: ValidationConfig = {}) => {
         ruleName: string,
         ruleParams: any[]
     ): Record<string, string> {
+        const val = Array.isArray(ruleParams) ? ruleParams[0] : ruleParams;
         if (
             ruleName === 'digits' ||
             ruleName === 'length' ||
             ruleName === 'min' ||
             ruleName === 'max'
         ) {
-            return { length: ruleParams[0] }
+            return { length: String(val ?? '') }
         }
 
         if (ruleName === 'between') {
-            return { min: ruleParams[0], max: ruleParams[1] }
+            return { min: String(ruleParams[0] ?? ''), max: String(ruleParams[1] ?? '') }
         }
 
         if (ruleName === 'dimensions') {
-            return { width: ruleParams[0], height: ruleParams[1] }
+            return { width: String(ruleParams[0] ?? ''), height: String(ruleParams[1] ?? '') }
         }
 
         if (ruleName === 'max_value') {
-            return { max: ruleParams[0] }
+            return { max: String(val ?? '') }
         }
 
         if (ruleName === 'min_value') {
-            return { min: ruleParams[0] }
+            return { min: String(val ?? '') }
         }
 
         if (ruleName === 'size') {
-            return { size: ruleParams[0] }
+            return { size: String(val ?? '') }
         }
 
         return {}
@@ -127,15 +129,18 @@ export const createFormBuilderValidation = (config: ValidationConfig = {}) => {
         const normalizeRules = getNormalizeRules(targetRules)
         return Object.keys(normalizeRules).reduce(
             (accumulator, ruleName) => {
-                const ruleParams = normalizeRules[ruleName] as Record<string, string>[]
+                // این جا ruleParams رو از آرایه یا آبجکت می‌کشی بیرون
+                const rawParams = normalizeRules[ruleName]
+                const ruleParams = Array.isArray(rawParams) ? rawParams : [rawParams]
+
                 const ruleFunction = function (inputValue: any) {
                     const fn = allValidations[ruleName]
                     if (typeof fn === 'function') {
+                        // vee-validate معمولاً پارامترها رو به صورت آرایه یا باز شده می‌خواد
                         const ruleResult = fn(inputValue, ruleParams)
                         if (ruleResult === true) return true
                         if (typeof ruleResult === 'string') return ruleResult
 
-                        // اگه false داد یا چیزی غیر true، پیغام ترجمه‌شده رو برگردون
                         return getRuleTranslation(ruleName, ruleParams, fieldName)
                     }
                     return false
@@ -155,18 +160,24 @@ export const createFormBuilderValidation = (config: ValidationConfig = {}) => {
     }
 }
 
-export function useInputRules(props: { rules?: any, label?: string }) {
-
+export function useInputRules(props: {
+    rules?: any,
+    label?: string | import('vue').Ref<string> | import('vue').ComputedRef<string> | (() => string)
+}) {
     const validator = inject<ReturnType<typeof createFormBuilderValidation>>(FORM_VALIDATOR_KEY)
 
     const parsedRules = computed(() => {
-        if (!validator) return props.rules || []
+        if (!validator) return toValue(props.rules) || []
+
+        // تبدیل به مقدار خام برای استفاده در لاجیک
+        const rawRules = toValue(props.rules)
+        const rawLabel = toValue(props.label) || ''
 
         // اگر رول استرینگ بود پارس کن، اگر نبود همون رو برگردون
-        if (typeof props.rules === 'string') {
-            return validator.parseRules(props.rules, props.label || '')
+        if (typeof rawRules === 'string') {
+            return validator.parseRules(rawRules, rawLabel)
         }
-        return props.rules || []
+        return rawRules || []
     })
 
     return { parsedRules }

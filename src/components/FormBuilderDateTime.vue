@@ -8,6 +8,7 @@
         ref="inputRef"
         v-bind="qInputAttrs"
         :model-value="displayDateTime"
+        :rules="parsedRules"
         readonly
         dir="ltr"
         @click="onClickInput"
@@ -77,6 +78,7 @@ import { computed, reactive, ref, useAttrs, watch } from 'vue'
 import { ClosePopup } from 'quasar'
 import jMoment from 'jalali-moment'
 import {pad2, toZuluISOStringFromLocalParts} from "@/utils/dateTime";
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderDateTime',
@@ -86,6 +88,7 @@ defineOptions({
 interface Props {
   modelValue?: string | null
   outsideLabel?: string | null
+  rules?: any
   calendar?: 'persian' | 'gregorian'
   calendarIcon?: string
   clockIcon?: string
@@ -96,6 +99,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   outsideLabel: null,
+  rules: () => [],
   calendar: 'persian',
   calendarIcon: 'event',
   clockIcon: 'access_time',
@@ -113,6 +117,13 @@ const attrs = useAttrs()
 const vClosePopup = ClosePopup
 const inputRef = ref<any>(null)
 
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const { parsedRules } = useInputRules({
+  rules: computed(() => props.rules), // اگر کامپوزبلت ری‌اکتیو نیست، بهتره اینطوری پاس بدی
+  label: computedLabel
+})
+
 const popupDate = ref(false)
 const popupTime = ref(false)
 
@@ -126,7 +137,7 @@ const isClearable = computed(() => {
 })
 
 const pickerTitle = computed(() => {
-  return (attrs.title as string) || (attrs.label as string) || props.outsideLabel || ''
+  return (attrs.title as string) || computedLabel.value || props.outsideLabel || ''
 })
 
 function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
@@ -150,7 +161,8 @@ const qInputAttrs = computed(() => {
     'calendarIcon',
     'clockIcon',
     'iso8601',
-    'outsideLabel'
+    'outsideLabel',
+    'rules'
   ])
 })
 
@@ -166,8 +178,7 @@ const qDateAttrs = computed(() => {
     'calendarIcon',
     'clockIcon',
     'iso8601',
-    'outsideLabel',
-    'label'
+    'outsideLabel'
   ])
 })
 

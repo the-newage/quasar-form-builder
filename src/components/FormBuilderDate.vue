@@ -13,6 +13,7 @@
         ref="inputRef"
         v-bind="filteredInputAttrs"
         :model-value="displayDate"
+        :rules="parsedRules"
         readonly
         dir="ltr"
         @clear="onClear"
@@ -76,6 +77,7 @@ import {
 import { QInput, QIcon, QPopupProxy, QDate, QBtn, ClosePopup } from 'quasar'
 
 import jMoment from 'jalali-moment'
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderDate',
@@ -85,6 +87,7 @@ defineOptions({
 interface Props {
   modelValue?: string | null
   outsideLabel?: string | null
+  rules?: any
   calendar?: 'persian' | 'gregorian'
   calendarIcon?: string
   todayBtn?: boolean
@@ -97,6 +100,7 @@ const props = withDefaults(
     {
       modelValue: null,
       outsideLabel: null,
+      rules: () => [],
       calendar: 'persian',
       calendarIcon: 'event',
       todayBtn: false,
@@ -117,8 +121,15 @@ const inputRef = ref<any>(null)
 
 const attrs = useAttrs()
 
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const { parsedRules } = useInputRules({
+  rules: computed(() => props.rules), // اگر کامپوزبلت ری‌اکتیو نیست، بهتره اینطوری پاس بدی
+  label: computedLabel
+})
+
 const filteredInputAttrs = computed(() => {
-  return filterAttrs(attrs, ['type', 'class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'calendar', 'calendarIcon', 'outsideLabel', 'range', 'multiple'])
+  return filterAttrs(attrs, ['type', 'class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'calendar', 'calendarIcon', 'outsideLabel', 'range', 'multiple', 'rules'])
 })
 
 const filteredDateAttrs = computed(() => {
@@ -126,7 +137,7 @@ const filteredDateAttrs = computed(() => {
 })
 
 const pickerTitle = computed(() => {
-  return (attrs.title as string) || (attrs.label as string) || props.outsideLabel || ''
+  return (attrs.title as string) || computedLabel.value || props.outsideLabel || ''
 })
 
 function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {

@@ -10,19 +10,19 @@
     <q-input
         ref="inputRef"
         v-bind="filteredAttrs"
-        :model-value="model"
+        v-model="localValue"
         :type="inputType"
         :rules="parsedRules"
-        @update:model-value="model = $event"
         @click="onClick"
         @keypress="onKeyPress"
+        @blur="onBlur"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { QInput } from 'quasar'
-import { computed, useAttrs, ref } from 'vue'
+import {computed, useAttrs, ref, watch, onMounted} from 'vue'
 import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
@@ -35,7 +35,6 @@ type InputValue = string | number | null
 interface Props {
   modelValue?: InputValue
   outsideLabel?: string
-  label?: string
   rules?: any
   inputType?:
       | 'text'
@@ -61,7 +60,6 @@ const props = withDefaults(
     {
       modelValue: '',
       outsideLabel: '',
-      label: '',
       rules: () => [],
       inputType: 'text',
       preventPersian: false,
@@ -75,14 +73,31 @@ const emit = defineEmits<{
   (e: 'change', value: InputValue): void
   (e: 'click', event: MouseEvent): void
   (e: 'keypress', event: KeyboardEvent): void
+  (e: 'blur', event: Event): void
 }>()
 
 const attrs = useAttrs()
 
-// استفاده از composable جهت پارس کردن رول‌های استرینگ به متدهای Quasar
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const localValue = ref<InputValue>(props.modelValue ?? '')
+
+watch(
+    () => props.modelValue,
+    (newVal) => {
+      if (newVal !== localValue.value) {
+        localValue.value = newVal ?? ''
+      }
+    }
+)
+
+watch(localValue, (newVal) => {
+  emitModelUpdate(newVal)
+})
+
 const { parsedRules } = useInputRules({
-  rules: props.rules,
-  label: props.label || props.outsideLabel
+  rules: computed(() => props.rules), // اگر کامپوزبلت ری‌اکتیو نیست، بهتره اینطوری پاس بدی
+  label: computedLabel
 })
 
 const filteredAttrs = computed(() => {
@@ -97,8 +112,7 @@ const filteredAttrs = computed(() => {
     'preventEnglish',
     'justNumber',
     'outsideLabel',
-    'rules',
-    'label'
+    'rules'
   ])
 })
 
@@ -113,21 +127,16 @@ function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
   return result
 }
 
-const model = computed<InputValue>({
-  get: () => props.modelValue ?? '',
-
-  set: (value) => {
-    emitModelUpdate(value)
-  }
-})
-
 const emitModelUpdate = (value: InputValue) => {
   emit('update:modelValue', value)
-  emit('change', value)
 }
 
 const onClick = (event: MouseEvent) => {
   emit('click', event)
+}
+
+const onBlur = (event: Event) => {
+  emit('blur', event)
 }
 
 const onKeyPress = (event: KeyboardEvent) => {
@@ -163,7 +172,8 @@ const onKeyPress = (event: KeyboardEvent) => {
 
   emit('keypress', event)
 }
-</script>
 
-<style scoped>
-</style>
+defineExpose({
+  inputRef
+})
+</script>

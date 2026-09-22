@@ -11,6 +11,7 @@
         ref="inputRef"
         v-bind="filteredInputAttrs"
         :model-value="displayTime"
+        :rules="parsedRules"
         readonly
         dir="ltr"
         @click="onClickInput"
@@ -65,6 +66,7 @@
 import { computed, ref, useAttrs, watch } from 'vue'
 import { QInput, QTime, QIcon, QPopupProxy, QBtn, ClosePopup } from 'quasar'
 import { pad2, toZuluISOStringFromLocalParts } from '@/utils/dateTime'
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderTime',
@@ -74,6 +76,7 @@ defineOptions({
 interface Props {
   modelValue?: string | null
   outsideLabel?: string
+  rules?: any
   clockIcon?: string
   nowBtn?: boolean
   zulu?: boolean
@@ -84,6 +87,7 @@ const props = withDefaults(
     {
       modelValue: null,
       outsideLabel: '',
+      rules: () => [],
       clockIcon: 'access_time',
       nowBtn: false,
       zulu: true
@@ -102,10 +106,17 @@ const inputRef = ref<any>(null)
 const popupTime = ref(false)
 const internalTime = ref('') // همیشه نگه‌دارنده HH:mm:00 به وقت محلی برای نمایش در QTime
 
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const { parsedRules } = useInputRules({
+  rules: computed(() => props.rules), // اگر کامپوزبلت ری‌اکتیو نیست، بهتره اینطوری پاس بدی
+  label: computedLabel
+})
+
 const isClearable = computed(() => attrs.clearable === true || attrs.clearable === '')
 
 const pickerTitle = computed(() => {
-  return (attrs.title as string) || (attrs.label as string) || props.outsideLabel || ''
+  return (attrs.title as string) || computedLabel.value || props.outsideLabel || ''
 })
 
 function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
@@ -128,7 +139,8 @@ const filteredInputAttrs = computed(() => {
     'clockIcon',
     'outsideLabel',
     'zulu',
-    'nowBtn'
+    'nowBtn',
+    'rules'
   ])
 })
 
@@ -142,7 +154,6 @@ const filteredTimeAttrs = computed(() => {
     'onUpdate:modelValue',
     'clockIcon',
     'outsideLabel',
-    'label',
     'zulu'
   ])
 })

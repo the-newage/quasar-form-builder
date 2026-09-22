@@ -1,7 +1,5 @@
 <template>
-  <div
-      class="form-builder-color"
-  >
+  <div class="form-builder-color">
     <div
         v-if="outsideLabel"
         class="outside-label"
@@ -13,6 +11,7 @@
         ref="inputRef"
         v-bind="filteredInputAttrs"
         :model-value="model"
+        :rules="parsedRules"
         :style="colorInputStyle"
         @click="onInputClick"
     >
@@ -49,6 +48,7 @@ import {
   useAttrs
 } from 'vue'
 import { QInput, QIcon, QMenu, QColor } from 'quasar'
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderColor',
@@ -60,6 +60,7 @@ type ColorValue = string | null
 interface Props {
   modelValue?: ColorValue
   outsideLabel?: string
+  rules?: any
   palette?: string[]
 }
 
@@ -68,6 +69,7 @@ const props = withDefaults(
     {
       modelValue: null,
       outsideLabel: '',
+      rules: () => [],
       palette: () => []
     }
 )
@@ -84,8 +86,15 @@ const showing = ref(false)
 
 const attrs = useAttrs()
 
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const { parsedRules } = useInputRules({
+  rules: computed(() => props.rules), // اگر کامپوزبلت ری‌اکتیو نیست، بهتره اینطوری پاس بدی
+  label: computedLabel
+})
+
 const filteredInputAttrs = computed(() => {
-  return filterAttrs(attrs, ['type', 'class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'palette', 'outsideLabel'])
+  return filterAttrs(attrs, ['type', 'class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'palette', 'outsideLabel', 'rules'])
 })
 
 const filteredColorAttrs = computed(() => {

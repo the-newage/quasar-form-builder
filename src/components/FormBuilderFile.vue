@@ -5,6 +5,7 @@
         ref="inputRef"
         :id="inputUid"
         v-bind="filteredAttrs"
+        :rules="parsedRules"
         :model-value="qFileModel"
         @update:model-value="qFileModel = $event"
         @clear="onClear"
@@ -44,6 +45,7 @@
 <script setup lang="ts">
 import { computed, ref, useAttrs } from 'vue'
 import { uid, QFile, QImg, QIcon } from 'quasar'
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderFile',
@@ -59,12 +61,14 @@ interface Props {
   caption?: string
   modelValue?: FileModelValue
   outsideLabel?: string
+  rules?: any
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   outsideLabel: '',
-  caption: ''
+  caption: '',
+  rules: () => []
 })
 
 const emit = defineEmits<{
@@ -74,8 +78,24 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const { parsedRules } = useInputRules({
+  rules: computed(() => props.rules),
+  label: computedLabel
+})
+
 const filteredAttrs = computed(() => {
-  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'caption', 'outsideLabel'])
+  return filterAttrs(attrs, [
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'caption',
+    'outsideLabel',
+    'rules'
+  ])
 })
 
 function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {

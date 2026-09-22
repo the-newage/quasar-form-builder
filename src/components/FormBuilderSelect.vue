@@ -12,6 +12,7 @@
         ref="inputRef"
         v-bind="filteredAttrs"
         :model-value="model"
+        :rules="parsedRules"
         :options="filteredOptions"
         use-input
         emit-value
@@ -28,6 +29,7 @@
 <script setup lang="ts">
 import { computed, ref, useAttrs, watch } from 'vue'
 import { QSelect } from 'quasar'
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderSelect',
@@ -51,6 +53,7 @@ interface Props {
   modelValue?: SelectValue
   options?: SelectOption[]
   outsideLabel?: string
+  rules?: any
   onChangeValue?: (
       newValue: SelectValue,
       oldValue: SelectValue
@@ -62,6 +65,7 @@ const props = withDefaults(defineProps<Props>(), {
   options: () => [],
   outsideLabel: '',
   createNewValue: false,
+  rules: () => [],
   onChangeValue: () => {}
 })
 
@@ -75,8 +79,15 @@ const inputRef = ref<any>(null)
 
 const attrs = useAttrs()
 
+const computedLabel = computed(() => (attrs.label as string) || props.outsideLabel || '')
+
+const { parsedRules } = useInputRules({
+  rules: computed(() => props.rules), // اگر کامپوزبلت ری‌اکتیو نیست، بهتره اینطوری پاس بدی
+  label: computedLabel
+})
+
 const filteredAttrs = computed(() => {
-  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'options', 'outsideLabel', 'createNewValue', 'onChangeValue'])
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'options', 'outsideLabel', 'createNewValue', 'onChangeValue', 'rules'])
 })
 
 function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {

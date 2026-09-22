@@ -52,7 +52,7 @@
   "dependencies": {
     "@vee-validate/rules": "^4.15.1",
     "jalali-moment": "^3.3.11",
-    "vue-form-builder-core": "^1.1.0"
+    "vue-form-builder-core": "^1.1.3"
   },
   "devDependencies": {
     "@quasar/extras": "^2.0.4",
