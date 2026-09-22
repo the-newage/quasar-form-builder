@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-select"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel"
@@ -11,10 +10,9 @@
     </div>
     <q-select
         ref="inputRef"
-        v-bind="qSelectAttrs"
+        v-bind="filteredAttrs"
         :model-value="model"
         :options="filteredOptions"
-        :class="customClass"
         use-input
         emit-value
         map-options
@@ -29,6 +27,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useAttrs, watch } from 'vue'
+import { QSelect } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderSelect',
@@ -48,7 +47,6 @@ interface SelectOption {
 }
 
 interface Props {
-  customClass?: string
   createNewValue?: boolean
   modelValue?: SelectValue
   options?: SelectOption[]
@@ -61,9 +59,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
-  name: '',
   options: () => [],
-  rules: () => [],
   outsideLabel: '',
   createNewValue: false,
   onChangeValue: () => {}
@@ -79,59 +75,22 @@ const inputRef = ref<any>(null)
 
 const attrs = useAttrs()
 
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'options', 'outsideLabel', 'createNewValue', 'onChangeValue'])
+})
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
 const filteredOptions = ref<SelectOption[]>([
   ...props.options
 ])
-
-/**
- * Attributes that can be passed directly to QSelect.
- */
-const allowedQSelectAttrs = new Set([
-  'optionLabel',
-  'optionValue',
-  'optionDisable',
-  'loading',
-
-  'dense',
-  'borderless',
-  'standout',
-  'dark',
-
-  'label',
-  'stackLabel',
-  'hint',
-  'hideHint',
-  'hideBottomSpace',
-
-  'color',
-  'bgColor',
-  'labelColor',
-
-  'loading',
-
-  'counter',
-  'hideSelected',
-
-  'popupContentStyle',
-
-  'autocomplete',
-
-  'virtualScrollSliceSize',
-  'virtualScrollSliceRatioBefore',
-  'virtualScrollSliceRatioAfter'
-])
-
-const qSelectAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQSelectAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
-})
 
 const model = computed<SelectValue>({
   get: () => props.modelValue ?? null,

@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-editor"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel"
@@ -16,12 +15,10 @@
     />
 
     <q-editor
-        v-if="!isDisabled"
+        v-if="!attrs.disable"
         ref="inputRef"
-        v-bind="qEditorAttrs"
+        v-bind="filteredAttrs"
         :model-value="model"
-        :class="customClass"
-        :content-class="customClass"
         :dense="$q.screen.lt.md"
         :toolbar="toolbar"
         :fonts="fonts"
@@ -39,7 +36,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useAttrs } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, QEditor } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderInputEditor',
@@ -50,22 +47,16 @@ type EditorValue = string
 
 interface Props {
   modelValue?: EditorValue
-  customClass?: string
   outsideLabel?: string
   label?: string
-  disabled?: boolean
-  readonly?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
       modelValue: '',
-      customClass: '',
       outsideLabel: '',
-      label: '',
-      disabled: false,
-      readonly: false
+      label: ''
     }
 )
 
@@ -78,11 +69,20 @@ const emit = defineEmits<{
 const attrs = useAttrs()
 const $q = useQuasar()
 
-const inputRef = ref<any>(null)
-
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'outsideLabel', 'label'])
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const inputRef = ref<any>(null)
 
 const model = computed<EditorValue>({
   get: () => props.modelValue ?? '',

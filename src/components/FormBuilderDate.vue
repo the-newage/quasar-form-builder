@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-date"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel"
@@ -12,10 +11,8 @@
 
     <q-input
         ref="inputRef"
-        v-bind="qInputAttrs"
+        v-bind="filteredInputAttrs"
         :model-value="displayDate"
-        :disable="disabled"
-        :class="customClass"
         readonly
         dir="ltr"
         @clear="onClear"
@@ -33,14 +30,13 @@
               transition-hide="scale"
           >
             <q-date
-                v-bind="qDateAttrs"
+                v-bind="filteredDateAttrs"
                 :model-value="calendarDate"
                 :calendar="calendar"
                 mask="YYYY/MM/DD"
                 :range="range"
                 :multiple="multiple"
-                :disable="disabled"
-                :title="title || label"
+                :title="pickerTitle"
                 :today-btn="todayBtn"
                 @update:model-value="onChangeDate"
             >
@@ -59,7 +55,7 @@
 
       <template #append>
         <q-btn
-            v-if="clearable"
+            v-if="isClearable"
             icon="close"
             flat
             round
@@ -77,6 +73,7 @@ import {
   ref,
   useAttrs
 } from 'vue'
+import { QInput, QIcon, QPopupProxy, QDate, QBtn, ClosePopup } from 'quasar'
 
 import jMoment from 'jalali-moment'
 
@@ -87,52 +84,24 @@ defineOptions({
 
 interface Props {
   modelValue?: string | null
-
-  customClass?: string
   outsideLabel?: string | null
-
   calendar?: 'persian' | 'gregorian'
   calendarIcon?: string
-
-  title?: string
-  label?: string
-  placeholder?: string
-
   todayBtn?: boolean
-
-  disabled?: boolean
-  readonly?: boolean
-
   range?: boolean
   multiple?: boolean
-
-  clearable?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
       modelValue: null,
-
-      customClass: '',
       outsideLabel: null,
-
       calendar: 'persian',
       calendarIcon: 'event',
-
-      title: '',
-      label: '',
-      placeholder: '',
-
       todayBtn: false,
-
-      disabled: false,
-      readonly: false,
-
       range: false,
-      multiple: false,
-
-      clearable: false
+      multiple: false
     }
 )
 
@@ -142,98 +111,36 @@ const emit = defineEmits<{
   (e: 'click'): void
 }>()
 
+const vClosePopup = ClosePopup
+
 const inputRef = ref<any>(null)
 
 const attrs = useAttrs()
 
+const filteredInputAttrs = computed(() => {
+  return filterAttrs(attrs, ['type', 'class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'calendar', 'calendarIcon', 'outsideLabel', 'range', 'multiple'])
+})
+
+const filteredDateAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'calendar', 'calendarIcon', 'outsideLabel', 'range', 'multiple'])
+})
+
+const pickerTitle = computed(() => {
+  return (attrs.title as string) || (attrs.label as string) || props.outsideLabel || ''
+})
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const isClearable = computed(() => attrs.clearable === true || attrs.clearable === '')
+
 const popupDate = ref(false)
-
-/**
- * Attributes that should be forwarded to QInput.
- */
-const allowedQInputAttrs = new Set([
-  'name',
-  'loading',
-
-  'loading',
-
-  'filled',
-  'outlined',
-  'borderless',
-  'standout',
-
-  'label',
-  'stackLabel',
-  'placeholder',
-
-  'error',
-  'errorMessage',
-
-  'rules',
-  'lazyRules',
-
-  'dense',
-
-  'color',
-  'bgColor',
-  'labelColor',
-
-  'clearable',
-
-  'hideHint',
-  'hideBottomSpace',
-
-  'hint',
-
-  'disable'
-])
-
-/**
- * Attributes that should be forwarded to QDate.
- */
-const allowedQDateAttrs = new Set([
-  'minimal',
-  'loading',
-
-  'color',
-  'textColor',
-
-  'events',
-  'eventColor',
-
-  'navigationMinYearMonth',
-  'navigationMaxYearMonth',
-
-  'defaultYearMonth',
-
-  'firstDayOfWeek',
-
-  'emitImmediately'
-])
-
-const qInputAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQInputAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
-})
-
-const qDateAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQDateAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
-})
 
 /**
  * Gregorian value -> displayed calendar value.
@@ -265,12 +172,8 @@ const calendarDate = computed(() => {
   return props.modelValue
 })
 
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
-})
-
 const onClickInput = () => {
-  if (isDisabled.value) {
+  if (attrs.disable) {
     return
   }
 

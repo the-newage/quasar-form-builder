@@ -2,66 +2,62 @@
   <q-layout view="lHh Lpr lFf" :dir="dir">
     <q-header elevated>
       <q-toolbar>
-        <q-btn flat
-               dense
-               round
-               aria-label="Menu"
-               icon="menu"
-               @click="leftDrawerOpen = !leftDrawerOpen" />
-
         <q-toolbar-title>Quasar Form Builder Playground</q-toolbar-title>
-
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
     </q-header>
 
     <q-page-container>
-<!--      <generator-panel />-->
+      <!-- <generator-panel /> -->
 
       <div class="row q-col-gutter-sm q-pa-md">
         <div class="col-md-3 col-12">
           <q-btn color="blue" class="full-width" @click="getData">
-            get data
+            Get Data
           </q-btn>
         </div>
         <div class="col-md-3 col-12">
           <q-btn color="orange" class="full-width" @click="clearInputValues">
-            clear inputs
+            Clear Inputs
           </q-btn>
         </div>
         <div class="col-md-3 col-12">
           <q-btn color="green" class="full-width" @click="changeScreenDirection">
-            change screen direction
+            Change Direction (LTR/RTL)
           </q-btn>
         </div>
         <div class="col-md-3 col-12">
           <q-btn color="red" class="full-width" @click="loading = !loading">
-            loading: {{ loading ? 'ON' : 'OFF' }}
+            Loading: {{ loading ? 'ON' : 'OFF' }}
           </q-btn>
         </div>
         <div class="col-md-3 col-12">
           <q-btn class="full-width" @click="mockDataDatePickers">
-            mock value for date pickers
+            Mock Date Pickers
           </q-btn>
         </div>
         <div class="col-md-3 col-12 flex items-center">
-          <q-checkbox v-model="readonly" label="readonly" />
+          <q-checkbox v-model="readonly" label="Readonly" />
         </div>
         <div class="col-md-3 col-12 flex items-center">
-          <q-checkbox v-model="disable" label="disable" />
+          <q-checkbox v-model="disable" label="Disable" />
         </div>
       </div>
 
       <div class="form-builder q-pa-md q-mx-sm">
-        <form-builder ref="formBuilderRef"
-                      v-model:inputs="inputs"
-                      v-model:formData="formData"
-                      class="q-mx-md"
-                      :readonly="readonly"
-                      :disable="disable"
-                      :loading="loading"
-                      @inputClick="onClick"
-                      @keydown="onKeyPress" />
+        ({{ disable }})
+        <form-builder
+            ref="formBuilderRef"
+            v-model:inputs="inputs"
+            v-model:formData="formData"
+            class="q-col-gutter-md"
+            :readonly="readonly"
+            :disabled="disable"
+            :loading="loading"
+            :form-data-mode="'flat'"
+            @inputClick="onClick"
+            @keydown="onKeyPress"
+        />
       </div>
     </q-page-container>
   </q-layout>
@@ -87,209 +83,253 @@ const loading = ref(false)
 const formData = ref<Record<string, any>>({})
 
 const inputs = ref<FormInputItem[]>([
+  // ==========================================
+  // 1. Text Fields & Editor
+  // ==========================================
   {
-    name: 'inputFile',
+    name: 'sep_text',
+    type: 'separator',
+    color: 'primary',
+    size: '2px',
+    separatorType: 'solid',
+    label: 'Text Fields & Editor',
+    col: 'col-12 q-my-md'
+  },
+  {
+    name: 'first_name',
+    type: 'input',
+    label: 'First Name (Standard Input)',
+    placeholder: 'e.g. John Doe',
+    rules: 'required|min:3|max:20',
+    outlined: true,
+    col: 'col-md-6 col-12'
+  },
+  {
+    name: 'bio_editor',
+    type: 'inputEditor',
+    label: 'About Me (Input Editor)',
+    placeholder: 'Write a short bio or formatted description...',
+    minHeight: '6rem',
+    col: 'col-12'
+  },
+
+  // ==========================================
+  // 2. Date & Time Family
+  // ==========================================
+  {
+    name: 'sep_datetime',
+    type: 'separator',
+    color: 'teal',
+    size: '2px',
+    separatorType: 'solid',
+    label: 'Date & Time Family',
+    col: 'col-12 q-my-md'
+  },
+  {
+    name: 'birth_date',
+    type: 'date',
+    label: 'Birth Date (Date Picker)',
+    calendar: 'gregorian',
+    outlined: true,
+    col: 'col-md-4 col-12'
+  },
+  {
+    name: 'meeting_time',
+    type: 'time',
+    label: 'Meeting Time (Time Picker)',
+    outlined: true,
+    col: 'col-md-4 col-12'
+  },
+  {
+    name: 'event_datetime',
+    type: 'datetime',
+    label: 'Event Schedule (DateTime Picker)',
+    calendar: 'gregorian',
+    outlined: true,
+    col: 'col-md-4 col-12'
+  },
+
+  // ==========================================
+  // 3. Selections & Choices
+  // ==========================================
+  {
+    name: 'sep_selects',
+    type: 'separator',
+    color: 'deep-orange',
+    size: '2px',
+    separatorType: 'solid',
+    label: 'Selections & Choices',
+    col: 'col-12 q-my-md'
+  },
+  {
+    name: 'role_select',
+    type: 'select',
+    label: 'User Role (Select)',
+    outlined: true,
+    options: [
+      { label: 'Administrator', value: 'admin' },
+      { label: 'Developer', value: 'dev' },
+      { label: 'UI/UX Designer', value: 'designer' }
+    ],
+    col: 'col-md-6 col-12'
+  },
+  {
+    name: 'toggle_choice',
+    type: 'toggleButton',
+    label: 'Status (Toggle Button)',
+    options: [
+      { label: 'Active', value: 'active' },
+      { label: 'Pending', value: 'pending' },
+      { label: 'Inactive', value: 'inactive' }
+    ],
+    color: 'primary',
+    textColor: 'white',
+    col: 'col-md-6 col-12'
+  },
+  {
+    name: 'permissions_group',
+    type: 'optionGroup',
+    label: 'Permissions (OptionGroup - Checkbox)',
+    typeOfInput: 'checkbox',
+    inline: true,
+    color: 'teal',
+    value: ['read'],
+    options: [
+      { label: 'Read', value: 'read' },
+      { label: 'Write', value: 'write' },
+      { label: 'Delete', value: 'delete' }
+    ],
+    col: 'col-md-6 col-12'
+  },
+  {
+    name: 'theme_radio',
+    type: 'optionGroup',
+    label: 'Theme (OptionGroup - Radio)',
+    typeOfInput: 'radio',
+    inline: true,
+    color: 'secondary',
+    value: 'light',
+    options: [
+      { label: 'Light', value: 'light' },
+      { label: 'Dark', value: 'dark' }
+    ],
+    col: 'col-md-3 col-12'
+  },
+  {
+    name: 'agree_terms',
+    type: 'checkbox',
+    label: 'I accept terms & conditions',
+    color: 'positive',
+    value: false,
+    col: 'col-md-3 col-12'
+  },
+
+  // ==========================================
+  // 4. Sliders & Color Picker
+  // ==========================================
+  {
+    name: 'sep_sliders',
+    type: 'separator',
+    color: 'purple',
+    size: '2px',
+    separatorType: 'solid',
+    label: 'Sliders & Color Picker',
+    col: 'col-12 q-my-md'
+  },
+  {
+    name: 'single_slider',
+    type: 'slider',
+    label: 'Satisfaction Score (Slider)',
+    min: 0,
+    max: 100,
+    step: 5,
+    value: 50,
+    labelAlways: true,
+    color: 'purple',
+    col: 'col-md-4 col-12'
+  },
+  {
+    name: 'budget_range',
+    type: 'rangeSlider',
+    label: 'Budget Range (RangeSlider)',
+    min: 0,
+    max: 100,
+    value: { min: 20, max: 70 },
+    labelAlways: true,
+    color: 'deep-purple',
+    col: 'col-md-4 col-12'
+  },
+  {
+    name: 'brand_color',
+    type: 'color',
+    label: 'Brand Color (Color Picker)',
+    outlined: true,
+    value: '#1976D2',
+    col: 'col-md-4 col-12'
+  },
+
+  // ==========================================
+  // 5. File Upload
+  // ==========================================
+  {
+    name: 'sep_file',
+    type: 'separator',
+    color: 'brown',
+    size: '2px',
+    separatorType: 'solid',
+    label: 'File & Attachment Management',
+    col: 'col-12 q-my-md'
+  },
+  {
+    name: 'resume_attachments',
     type: 'file',
-    capture: 'user',
-    accept: '*',
+    label: 'Upload Attachments / Documents',
     multiple: true,
     clearable: true,
-    label: 'just capture',
+    outlined: true,
+    accept: '.pdf,.png,.jpg,.jpeg',
     col: 'col-12'
   },
+
+  // ==========================================
+  // 6. Action Buttons
+  // ==========================================
   {
-    type: 'select',
-    dropdownIcon: 'add',
-    class: 'testCustomClass',
-    name: 'question_type',
-    responseKey: 'data.question_type',
-    options: [
-      { label: 'konkur', value: 'konkur' },
-      { label: 'psychometric', value: 'psychometric' },
-      { label: 'descriptive', value: 'descriptive' }
-    ],
-    col: 'col-12'
-  },
-  {
-    name: 'submit',
-    type: 'submit',
-    label: 'submit btn',
-    col: 'col-12'
-  },
-  {
-    name: 'separator',
+    name: 'sep_actions',
     type: 'separator',
-    color: 'secondary',
+    color: 'grey-8',
     size: '1px',
-    separatorType: 'solid',
-    // label: 'this is hidden separator',
-    col: 'col-md-12 q-my-md'
+    separatorType: 'dashed',
+    col: 'col-12 q-my-md'
   },
   {
-    type: 'hidden',
-    name: 'hidden_field',
-    col: 'col-md-6'
+    name: 'draft_btn',
+    type: 'button',
+    label: 'Save Draft',
+    color: 'grey-7',
+    outline: true,
+    col: 'col-md-2 col-6'
   },
   {
-    type: 'rangeSlider',
-    name: 'ZoomRate',
-    col: 'col-md-6',
-    label: 'zoom rate from:',
-    min: 0,
-    max: 11,
-    value: {
-      min: 5,
-      max: 7
-    }
-  },
-  {
-    name: 'separator',
-    type: 'separator',
-    color: 'secondary',
-    size: '3px',
-    separatorType: 'solid',
-    label: 'toggleButton & optionGroup & checkbox',
-    col: 'col-md-12'
-  },
-  {
-    type: 'toggleButton',
-    name: 'sample-toggle-button',
-    label: 'ToggleButton',
-    options: [
-      { label: 'tab1', value: '1' },
-      { label: 'tab2', value: '2' },
-      { label: 'tab3', value: '3' }
-    ],
-    col: 'col-md-3 col-12',
-    size: 'md',
-    color: 'red',
-    textColor: 'black'
-  },
-  {
-    type: 'optionGroup',
-    name: 'id_option_group',
-    inline: false,
-    dense: true,
-    label: 'optionGroup',
-    value: [],
-    options: [
-      { label: 'tab1', value: '1', caption: 'caption' },
-      { label: 'tab2', value: '2' },
-      { label: 'tab3', value: '3', caption: 'caption' },
-      { label: 'tab4', value: '4' }
-    ],
-    col: 'col-md-3',
-    color: 'green',
-    typeOfInput: 'checkbox',
-    textColor: 'black',
-  },
-  {
-    type: 'optionGroup',
-    name: 'radioButton',
-    inline: false,
-    dense: true,
-    label: 'radioButton',
-    value: {},
-    options: [
-      { label: 'tab1', value: '1' },
-      { label: 'tab2', value: '2' },
-      { label: 'tab3', value: '3' }
-    ],
-    col: 'col-md-3',
-    color: 'blue',
-    textColor: 'black',
-  },
-  { type: 'checkbox', name: 'enable', label: 'فعال', col: 'col-md-3' },
-  {
-    name: 'separator',
-    type: 'separator',
-    color: 'secondary',
-    size: '3px',
-    separatorType: 'solid',
-    col: 'col-md-12'
-  },
-  {
-    name: 'separator',
-    type: 'separator',
-    color: 'accent',
-    size: '3px',
-    separatorType: 'solid',
-    label: 'custom component',
-    col: 'col-md-12'
-  },
-  {
-    type: CustomComponentInput,
-    props: { name: 'ali' },
-    name: 'ali',
-    value: 123,
-    label: 'شناسه علی',
-    col: 'col-md-6'
-  },
-  {
-    type: CustomComponentInput,
-    props: { name: 'mostafa' },
-    name: 'mostafa',
-    value: 456,
-    label: 'شناسه مصطفی',
-    col: 'col-md-6'
-  },
-  {
-    name: 'separator',
-    type: 'separator',
-    color: 'negative',
-    size: '3px',
-    separatorType: 'solid',
-    label: 'form-builder inside a form-builder',
-    col: 'col-md-12'
-  },
-  {
-    type: 'formBuilder',
-    name: 'formBuilderCol',
-    col: 'col-md-12',
-    gutterSize: 'lg',
-    inputs: [
-      {
-        type: 'input',
-        name: 'id1',
-        value: null,
-        label: 'disabled input',
-        col: 'col-md-6',
-        disable: true
-      },
-      {
-        type: 'input',
-        name: 'id2',
-        color: 'positive',
-        value: 'readonly input',
-        label: 'input in read only mode',
-        col: 'col-md-6',
-        readonly: true,
-        filled: true
-      }
-    ]
-  },
-  {
-    type: 'date',
-    name: 'last_modification_time',
-    label: 'required date with label',
-    calendar: 'persian',
-    col: 'col-md-6'
+    name: 'submit_btn',
+    type: 'button',
+    label: 'Submit',
+    color: 'primary',
+    unelevated: true,
+    col: 'col-md-2 col-6'
   }
 ])
 
 watch(readonly, (newValue) => {
-  // اگر نیاز به متد کمکی هست می‌تونی از ref صدا بزنی
+  // Can trigger helper methods via ref if needed
 })
 
 watch(disable, (newValue) => {
-  // مدیریت وضعیت disable عمومی
+  // Global disable state handler
 })
 
 onMounted(() => {
-  // تست مقداردهی اولیه یا نمونه عکس
-  if (inputs.value[2]) {
-    // تنظیمات دلخواه اولیه
-  }
+  // Playground mounted lifecycle hook
 })
 
 const onClick = (data: any) => {
@@ -297,14 +337,11 @@ const onClick = (data: any) => {
 }
 
 const onKeyPress = (data: any) => {
-  console.log('key press:', data)
+  // console.log('key press:', data)
 }
 
 const getData = () => {
   console.log('Form Data Object: ', formData.value)
-  if (formBuilderRef.value) {
-    console.log('Normalized Form Data:', formBuilderRef.value.getNormalizedFormData(inputs.value))
-  }
 }
 
 const mockDataDatePickers = () => {

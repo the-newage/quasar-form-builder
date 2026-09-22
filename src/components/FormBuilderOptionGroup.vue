@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-optionGroup"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel || label"
@@ -12,12 +11,10 @@
 
     <q-option-group
         ref="inputRef"
-        v-bind="qOptionGroupAttrs"
+        v-bind="filteredAttrs"
         :model-value="model"
         :options="options"
         :type="typeOfInput"
-        :disable="isDisabled"
-        :class="customClass"
         @update:model-value="model = $event"
         @click="onClick"
     >
@@ -51,6 +48,7 @@ import {
   ref,
   useAttrs
 } from 'vue'
+import { QOptionGroup, QIcon } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderOptionGroup',
@@ -85,10 +83,6 @@ interface Props {
   typeOfInput?: OptionGroupType
   label?: string
   outsideLabel?: string
-  customClass?: string
-
-  disabled?: boolean
-  readonly?: boolean
 }
 
 const props = withDefaults(
@@ -98,9 +92,7 @@ const props = withDefaults(
       options: () => [],
       typeOfInput: 'radio',
       label: '',
-      customClass: '',
-      disabled: false,
-      readonly: false
+      outsideLabel: ''
     }
 )
 
@@ -110,47 +102,22 @@ const emit = defineEmits<{
   (e: 'click'): void
 }>()
 
-const inputRef = ref<any>(null)
-
 const attrs = useAttrs()
 
-/**
- * Attributes that can be passed directly to QOptionGroup.
- */
-const allowedQOptionGroupAttrs = new Set([
-  'name',
-  'loading',
-
-  'color',
-  'keepColor',
-
-  'inline',
-  'dense',
-
-  'leftLabel',
-
-  'dark',
-
-  'optionsHtml',
-
-  'size',
-
-  'disable',
-
-  'class'
-])
-
-const qOptionGroupAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQOptionGroupAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'options', 'typeOfInput', 'outsideLabel', 'label'])
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const inputRef = ref<any>(null)
 
 const model = computed<OptionValue>({
   get: () => props.modelValue ?? null,
@@ -158,10 +125,6 @@ const model = computed<OptionValue>({
   set: (value) => {
     emitModelUpdate(value)
   }
-})
-
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
 })
 
 const emitModelUpdate = (

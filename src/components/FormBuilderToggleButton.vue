@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-toggle-button"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel || label"
@@ -12,9 +11,8 @@
 
     <q-btn-toggle
         ref="inputRef"
-        v-bind="qBtnToggleAttrs"
+        v-bind="filteredAttrs"
         :model-value="model"
-        :class="customClass"
         :options="options"
         @update:model-value="model = $event"
         @click="onClick"
@@ -24,6 +22,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useAttrs } from 'vue'
+import { QBtnToggle } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderToggleButton',
@@ -40,14 +39,12 @@ type ToggleValue =
 
 interface Props {
   options: any[]
-  customClass?: string
   label?: string
   outsideLabel?: string
   modelValue?: ToggleValue
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  customClass: '',
   label: '',
   outsideLabel: '',
   modelValue: null
@@ -59,69 +56,22 @@ const emit = defineEmits<{
   (e: 'click'): void
 }>()
 
-const inputRef = ref<any>(null)
-
 const attrs = useAttrs()
 
-/**
- * Attributes that can be passed directly to QBtnToggle.
- */
-const allowedQBtnToggleAttrs = new Set([
-  'name',
-  'loading',
-
-  'options',
-
-  'color',
-  'textColor',
-
-  'toggleColor',
-  'toggleTextColor',
-
-  'push',
-  'glossy',
-
-  'clearable',
-
-  'inline',
-  'dense',
-
-  'type',
-
-  'disable',
-  'readonly',
-
-  'unelevated',
-  'flat',
-  'outlined',
-
-  'rounded',
-
-  'size',
-
-  'ripple',
-
-  'noCaps',
-  'noWrap',
-
-  'spread',
-  'stack',
-  'stretch',
-
-  'dark'
-])
-
-const qBtnToggleAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQBtnToggleAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'options', 'outsideLabel', 'label'])
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const inputRef = ref<any>(null)
 
 const model = computed<ToggleValue>({
   get: () => props.modelValue ?? null,

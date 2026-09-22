@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-color"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel"
@@ -12,10 +11,8 @@
 
     <q-input
         ref="inputRef"
-        v-bind="qInputAttrs"
+        v-bind="filteredInputAttrs"
         :model-value="model"
-        :disable="isDisabled"
-        :class="customClass"
         :style="colorInputStyle"
         @click="onInputClick"
     >
@@ -25,11 +22,11 @@
             class="cursor-pointer"
         >
           <q-menu
-              v-if="!isDisabled"
+              v-if="!attrs.disable"
               v-model="showing"
           >
             <q-color
-                v-bind="qColorAttrs"
+                v-bind="filteredColorAttrs"
                 :model-value="model"
                 :palette="palette"
                 square
@@ -51,6 +48,7 @@ import {
   ref,
   useAttrs
 } from 'vue'
+import { QInput, QIcon, QMenu, QColor } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderColor',
@@ -61,28 +59,16 @@ type ColorValue = string | null
 
 interface Props {
   modelValue?: ColorValue
-
-  customClass?: string
   outsideLabel?: string
-
   palette?: string[]
-
-  disabled?: boolean
-  readonly?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
       modelValue: null,
-
-      customClass: '',
       outsideLabel: '',
-
-      palette: () => [],
-
-      disabled: false,
-      readonly: false
+      palette: () => []
     }
 )
 
@@ -98,82 +84,22 @@ const showing = ref(false)
 
 const attrs = useAttrs()
 
-/**
- * Attributes that can be passed directly to QInput.
- */
-const allowedQInputAttrs = new Set([
-  'name',
-  'loading',
-
-  'filled',
-  'outlined',
-  'borderless',
-  'standout',
-
-  'label',
-  'stackLabel',
-  'placeholder',
-
-  'error',
-  'errorMessage',
-
-  'loading',
-
-  'clearable',
-
-  'rules',
-  'lazyRules',
-
-  'dense',
-
-  'color',
-  'bgColor',
-  'labelColor',
-
-  'hideHint',
-  'hideBottomSpace',
-
-  'hint'
-])
-
-/**
- * Attributes that can be passed directly to QColor.
- */
-const allowedQColorAttrs = new Set([
-  'noHeader',
-  'noFooter',
-  'loading',
-
-  'defaultView',
-
-  'formatModel',
-
-  'palette'
-])
-
-const qInputAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQInputAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+const filteredInputAttrs = computed(() => {
+  return filterAttrs(attrs, ['type', 'class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'palette', 'outsideLabel'])
 })
 
-const qColorAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQColorAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+const filteredColorAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'outsideLabel'])
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
 
 const model = computed<ColorValue>({
   get: () => props.modelValue ?? null,
@@ -181,10 +107,6 @@ const model = computed<ColorValue>({
   set: (value) => {
     emitModelUpdate(value)
   }
-})
-
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
 })
 
 /**
@@ -208,7 +130,7 @@ const emitModelUpdate = (
 }
 
 const onInputClick = () => {
-  if (isDisabled.value) {
+  if (attrs.disable) {
     return
   }
 

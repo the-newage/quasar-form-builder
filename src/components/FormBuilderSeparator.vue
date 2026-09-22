@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-separator"
-      :class="customClass"
   >
     <b
         v-if="outsideLabel || label"
@@ -12,10 +11,9 @@
 
     <q-separator
         v-if="hasSize"
-        v-bind="qSeparatorAttrs"
+        v-bind="filteredAttrs"
         class="separator-default-style"
         :class="[
-          customClass,
           vertical
               ? 'separator-vertical'
               : 'separator-horizontal'
@@ -27,6 +25,7 @@
 
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue'
+import { QSeparator } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderSeparator',
@@ -36,26 +35,17 @@ defineOptions({
 type SpacingValue = boolean | string
 
 interface Props {
-  customClass?: string
-
   label?: string
   outsideLabel?: string
-
   color?: string
-
   size?: string | number
-
   vertical?: boolean
-
   spaced?: SpacingValue
-
   inset?: SpacingValue
-
   separatorType?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  customClass: '',
   label: '',
   outsideLabel: '',
   color: 'dark',
@@ -68,30 +58,18 @@ const props = withDefaults(defineProps<Props>(), {
 
 const attrs = useAttrs()
 
-/**
- * Attributes that can be passed directly to QSeparator.
- */
-const allowedQSeparatorAttrs = new Set([
-  'dark',
-  'vertical',
-  'loading',
-  'inset',
-  'spaced',
-  'size',
-  'color'
-])
-
-const qSeparatorAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQSeparatorAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'label', 'outsideLabel', 'color', 'size', 'vertical', 'spaced', 'inset', 'separatorType'])
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
 
 const normalizedSize = computed(() => {
   const size = props.size

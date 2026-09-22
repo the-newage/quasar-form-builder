@@ -1,12 +1,6 @@
 <template>
-  <div
-      class="form-builder-date-time"
-      :class="customClass"
-  >
-    <div
-        v-if="outsideLabel"
-        class="outside-label"
-    >
+  <div class="form-builder-date-time">
+    <div v-if="outsideLabel" class="outside-label">
       {{ outsideLabel }}
     </div>
 
@@ -14,17 +8,12 @@
         ref="inputRef"
         v-bind="qInputAttrs"
         :model-value="displayDateTime"
-        :disable="isDisabled"
         readonly
         dir="ltr"
-        :class="customClass"
         @click="onClickInput"
     >
       <template #prepend>
-        <q-icon
-            :name="calendarIcon"
-            class="cursor-pointer"
-        >
+        <q-icon :name="calendarIcon" class="cursor-pointer">
           <q-popup-proxy
               v-model="popupDate"
               cover
@@ -36,20 +25,11 @@
                 :model-value="dateTime.date"
                 :calendar="calendar"
                 mask="YYYY/MM/DD"
-                :range="range"
-                :multiple="multiple"
-                :disable="isDisabled"
-                :title="title || label"
-                :today-btn="todayBtn"
+                :title="pickerTitle"
                 @update:model-value="onChangeDate"
             >
               <div class="row items-center justify-end">
-                <q-btn
-                    v-close-popup
-                    label="بستن"
-                    color="primary"
-                    flat
-                />
+                <q-btn v-close-popup label="Close" color="primary" flat />
               </div>
             </q-date>
           </q-popup-proxy>
@@ -57,10 +37,7 @@
       </template>
 
       <template #append>
-        <q-icon
-            :name="clockIcon"
-            class="cursor-pointer"
-        >
+        <q-icon :name="clockIcon" class="cursor-pointer">
           <q-popup-proxy
               v-model="popupTime"
               cover
@@ -72,25 +49,18 @@
                 :model-value="dateTime.time"
                 mask="HH:mm:00"
                 format24h
-                :disable="isDisabled"
-                :title="title || label"
-                :now-btn="nowBtn"
+                :title="pickerTitle"
                 @update:model-value="onChangeTime"
             >
               <div class="row items-center justify-end">
-                <q-btn
-                    v-close-popup
-                    label="بستن"
-                    color="primary"
-                    flat
-                />
+                <q-btn v-close-popup label="Close" color="primary" flat />
               </div>
             </q-time>
           </q-popup-proxy>
         </q-icon>
 
         <q-btn
-            v-if="clearable"
+            v-if="isClearable && !!modelValue"
             icon="close"
             flat
             round
@@ -103,15 +73,10 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  reactive,
-  ref,
-  useAttrs,
-  watch
-} from 'vue'
-
+import { computed, reactive, ref, useAttrs, watch } from 'vue'
+import { ClosePopup } from 'quasar'
 import jMoment from 'jalali-moment'
+import {pad2, toZuluISOStringFromLocalParts} from "@/utils/dateTime";
 
 defineOptions({
   name: 'FormBuilderDateTime',
@@ -120,419 +85,273 @@ defineOptions({
 
 interface Props {
   modelValue?: string | null
-
-  customClass?: string
   outsideLabel?: string | null
-
   calendar?: 'persian' | 'gregorian'
   calendarIcon?: string
   clockIcon?: string
-
-  title?: string
-  label?: string
-  placeholder?: string
-
-  nowBtn?: boolean
-  todayBtn?: boolean
-
   iso8601?: boolean
-
-  range?: boolean
-  multiple?: boolean
-
-  disabled?: boolean
-  readonly?: boolean
-
-  clearable?: boolean
+  zulu?: boolean
 }
 
-const props = withDefaults(
-    defineProps<Props>(),
-    {
-      modelValue: null,
-
-      customClass: '',
-      outsideLabel: null,
-
-      calendar: 'persian',
-      calendarIcon: 'event',
-      clockIcon: 'access_time',
-
-      title: '',
-      label: '',
-      placeholder: '',
-
-      nowBtn: false,
-      todayBtn: false,
-
-      iso8601: true,
-
-      range: false,
-      multiple: false,
-
-      disabled: false,
-      readonly: false,
-
-      clearable: false
-    }
-)
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: null,
+  outsideLabel: null,
+  calendar: 'persian',
+  calendarIcon: 'event',
+  clockIcon: 'access_time',
+  iso8601: true,
+  zulu: true
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string | null): void
   (e: 'change', value: string | null): void
-  (e: 'click'): void
+  (e: 'click', event: MouseEvent): void
 }>()
 
 const attrs = useAttrs()
-
+const vClosePopup = ClosePopup
 const inputRef = ref<any>(null)
 
 const popupDate = ref(false)
 const popupTime = ref(false)
 
 const dateTime = reactive({
-  date: '',
+  date: '', // همواره فرمت YYYY/MM/DD متناسب با تقویم انتخابی جهت خوانایی QDate
   time: ''
 })
 
-/**
- * Attributes that can be passed directly to QInput.
- */
-const allowedQInputAttrs = new Set([
-  'name',
-  'loading',
+const isClearable = computed(() => {
+  return attrs.clearable === true || attrs.clearable === ''
+})
 
-  'loading',
+const pickerTitle = computed(() => {
+  return (attrs.title as string) || (attrs.label as string) || props.outsideLabel || ''
+})
 
-  'filled',
-  'outlined',
-  'borderless',
-  'standout',
-
-  'label',
-  'stackLabel',
-  'placeholder',
-
-  'error',
-  'errorMessage',
-
-  'rules',
-  'lazyRules',
-
-  'dense',
-
-  'color',
-  'bgColor',
-  'labelColor',
-
-  'hideHint',
-  'hideBottomSpace',
-
-  'hint'
-])
-
-/**
- * Attributes that can be passed directly to QDate.
- */
-const allowedQDateAttrs = new Set([
-  'minimal',
-  'loading',
-
-  'color',
-  'textColor',
-
-  'events',
-  'eventColor',
-
-  'navigationMinYearMonth',
-  'navigationMaxYearMonth',
-
-  'defaultYearMonth',
-
-  'firstDayOfWeek',
-
-  'emitImmediately',
-
-  'todayBtn'
-])
-
-/**
- * Attributes that can be passed directly to QTime.
- */
-const allowedQTimeAttrs = new Set([
-  'color',
-  'textColor',
-  'loading',
-
-  'dark',
-
-  'format24h',
-
-  'withSeconds',
-
-  'nowBtn',
-
-  'hourOptions',
-  'minuteOptions',
-  'secondOptions',
-
-  'landscape',
-
-  'mask'
-])
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
 
 const qInputAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQInputAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+  return filterAttrs(attrs, [
+    'type',
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'calendar',
+    'calendarIcon',
+    'clockIcon',
+    'iso8601',
+    'outsideLabel'
+  ])
 })
 
 const qDateAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQDateAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
+  return filterAttrs(attrs, [
+    'type',
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'calendar',
+    'calendarIcon',
+    'clockIcon',
+    'iso8601',
+    'outsideLabel',
+    'label'
+  ])
 })
 
 const qTimeAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
+  return filterAttrs(attrs, [
+    'type',
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'calendar',
+    'calendarIcon',
+    'clockIcon',
+    'iso8601',
+    'outsideLabel',
+    'label'
+  ])
+})
 
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQTimeAttrs.has(key)) {
-      result[key] = value
+// نمایش داخل فیلد ورودی QInput
+const displayDateTime = computed(() => {
+  if (!dateTime.date && !dateTime.time) return ''
+  return `${dateTime.date} ${dateTime.time}`.trim()
+})
+
+// تجزیه ایمن مدل ورودی به تاریخ میلادی و زمان
+const parseModelValue = (value: string | null | undefined) => {
+  if (!value) return null
+  const str = String(value).trim()
+
+  // اگر Zulu بود، مستقیم با Date پارس می‌کنیم تا timezone درست اعمال شود
+  if (str.endsWith('Z')) {
+    const dt = new Date(str)
+    if (isNaN(dt.getTime())) return null
+
+    // تبدیل به تاریخ/زمان محلی برای نمایش (چون UI محلی است)
+    const yyyy = dt.getFullYear()
+    const mm = pad2(dt.getMonth() + 1)
+    const dd = pad2(dt.getDate())
+    const HH = pad2(dt.getHours())
+    const MM = pad2(dt.getMinutes())
+    const SS = pad2(dt.getSeconds())
+
+    return {
+      gregorianDate: `${yyyy}-${mm}-${dd}`,
+      time: `${HH}:${MM}:${SS}`
     }
   }
 
-  return result
-})
+  // حالت‌های قبلی (بدون Z)
+  const delimiter = str.includes('T') ? 'T' : ' '
+  const parts = str.split(delimiter)
 
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
-})
+  let datePart = parts[0] ? parts[0].replace(/\//g, '-') : ''
+  let timePart = parts[1] ? parts[1].substring(0, 8) : '00:00:00'
 
-/**
- * Date/time displayed inside QInput.
- *
- * External model value:
- *   Gregorian
- *
- * Display:
- *   Persian when calendar === 'persian'
- */
-const displayDateTime = computed(() => {
-  if (!props.modelValue) {
-    return ''
+  return {
+    gregorianDate: datePart,
+    time: timePart.length === 5 ? `${timePart}:00` : timePart
   }
+}
 
-  const value = props.modelValue.toString()
-
-  const jmomentValue = jMoment.utc(value)
-
-  const date = jmomentValue.format('YYYY-MM-DD')
-  const time = jmomentValue.format('HH:mm:00')
-
-  const displayDate =
-      props.calendar === 'persian'
-          ? miladiToShamsiDate(date)
-          : date
-
-  return `${displayDate} ${time}`
-})
-
-/**
- * Initialize internal date/time values from modelValue.
- */
-const syncFromModelValue = (
-    value: string | null | undefined
-) => {
-  if (!value) {
+const syncFromModelValue = (value: string | null | undefined) => {
+  const parsed = parseModelValue(value)
+  if (!parsed) {
     dateTime.date = ''
     dateTime.time = ''
     return
   }
 
-  const jmomentValue = jMoment.utc(value.toString())
+  dateTime.date = props.calendar === 'persian'
+      ? miladiToShamsiDate(parsed.gregorianDate)
+      : parsed.gregorianDate.replace(/-/g, '/')
 
-  const gregorianDate = jmomentValue.format('YYYY-MM-DD')
-  const time = jmomentValue.format('HH:mm:00')
-
-  dateTime.date =
-      props.calendar === 'persian'
-          ? miladiToShamsiDate(gregorianDate)
-          : gregorianDate
-
-  dateTime.time = time
+  dateTime.time = parsed.time
 }
 
 watch(
     () => props.modelValue,
-    (value) => {
-      syncFromModelValue(value)
-    },
-    {
-      immediate: true
-    }
+    (val) => syncFromModelValue(val),
+    { immediate: true }
 )
 
-const onClickInput = (
-    event: MouseEvent
-) => {
-  if (isDisabled.value) {
+// اگر داینامیک calendar عوض شد، فرمت date بروزرسانی شود
+watch(
+    () => props.calendar,
+    () => syncFromModelValue(props.modelValue)
+)
+
+const onClickInput = (event: MouseEvent) => {
+  if (attrs.disable) return
+
+  const el = event.currentTarget as HTMLElement | null
+  if (!el) {
+    popupDate.value = true
+    emit('click', event)
     return
   }
 
-  const input = event.target as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const clickX = event.clientX - rect.left
+  const halfway = rect.width / 2
 
-  const inputRect = input.getBoundingClientRect()
-
-  const clickX =
-      event.clientX - inputRect.left
-
-  const halfwayPoint =
-      inputRect.width / 2
-
-  if (clickX < halfwayPoint) {
+  if (clickX < halfway) {
     popupDate.value = true
   } else {
     popupTime.value = true
   }
 
-  emit('click')
+  emit('click', event)
 }
 
 const onClear = () => {
   dateTime.date = ''
   dateTime.time = ''
-
   emitModelUpdate(null)
 }
 
-const onChangeDate = (
-    newValue: string | null
-) => {
-  if (!newValue) {
-    return
-  }
+const onChangeDate = (newValue: string | null) => {
+  if (!newValue) return
 
-  let gregorianDate = newValue
+  const rawVal = String(newValue)
+  let gregorianDate = ''
 
   if (props.calendar === 'persian') {
-    gregorianDate = shamsiToMiladiDate(
-        newValue.toString()
-    )
+    gregorianDate = shamsiToMiladiDate(rawVal)
+    dateTime.date = rawVal // حفظ فرمت jYYYY/jMM/jDD برای نمایشگر QDate
+  } else {
+    // در حالت گرگوریان خروجی QDate به فرم YYYY/MM/DD است، برای ایزو به دَش تبدیل می‌کنیم
+    gregorianDate = rawVal.replace(/\//g, '-')
+    dateTime.date = rawVal
   }
 
-  updateDateTime(
-      gregorianDate,
-      'date'
-  )
+  updateDateTime(gregorianDate, 'date')
 }
 
-const onChangeTime = (
-    newValue: string | null
-) => {
-  if (!newValue) {
+const onChangeTime = (newValue: string | null) => {
+  if (!newValue) return
+  const formattedTime = String(newValue).substring(0, 8)
+  dateTime.time = formattedTime
+  updateDateTime(formattedTime, 'time')
+}
+
+const updateDateTime = (newValue: string, updateType: 'date' | 'time') => {
+  let currentDate = ''
+  let currentTime = ''
+
+  const parsed = parseModelValue(props.modelValue)
+  if (parsed) {
+    currentDate = parsed.gregorianDate
+    currentTime = parsed.time
+  } else {
+    const now = new Date()
+    currentDate = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+    currentTime = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:00`
+  }
+
+  if (updateType === 'date') currentDate = newValue
+  if (updateType === 'time') currentTime = newValue
+
+  // NEW behavior:
+  if (props.zulu) {
+    const result = toZuluISOStringFromLocalParts(currentDate, currentTime)
+    emitModelUpdate(result)
     return
   }
 
-  updateDateTime(
-      newValue.toString(),
-      'time'
-  )
-}
-
-const updateDateTime = (
-    newValue: string,
-    updateType: 'date' | 'time'
-) => {
-  const now = jMoment(Date.now())
-
-  const defaultDate =
-      now.format('YYYY-MM-DD')
-
-  const defaultTime =
-      now.format('HH:mm:00')
-
-  let currentDate = defaultDate
-  let currentTime = defaultTime
-
-  if (props.modelValue) {
-    const currentMoment =
-        jMoment.utc(props.modelValue)
-
-    currentDate =
-        currentMoment.format('YYYY-MM-DD')
-
-    currentTime =
-        currentMoment.format('HH:mm:00')
-  }
-
-  if (updateType === 'date') {
-    currentDate = newValue
-  }
-
-  if (updateType === 'time') {
-    currentTime = newValue
-  }
-
-  dateTime.date =
-      props.calendar === 'persian'
-          ? miladiToShamsiDate(currentDate)
-          : currentDate
-
-  dateTime.time =
-      currentTime.substring(0, 8)
-
-  const delimiter =
-      props.iso8601
-          ? 'T'
-          : ' '
-
-  const result =
-      `${currentDate}${delimiter}${currentTime}`
-
+  const delimiter = props.iso8601 ? 'T' : ' '
+  const result = `${currentDate}${delimiter}${currentTime}`
   emitModelUpdate(result)
 }
 
-const emitModelUpdate = (
-    value: string | null
-) => {
+const emitModelUpdate = (value: string | null) => {
   emit('update:modelValue', value)
   emit('change', value)
 }
 
-/**
- * Jalali -> Gregorian
- */
-const shamsiToMiladiDate = (
-    date: string
-): string => {
-  return jMoment(
-      date,
-      'jYYYY/jMM/jDD'
-  ).format('YYYY-MM-DD')
+const shamsiToMiladiDate = (date: string): string => {
+  return jMoment(date, 'jYYYY/jMM/jDD').format('YYYY-MM-DD')
 }
 
-/**
- * Gregorian -> Jalali
- */
-const miladiToShamsiDate = (
-    date: string
-): string => {
-  return jMoment
-      .utc(date, 'YYYY-MM-DD')
-      .format('jYYYY/jMM/jDD')
+const miladiToShamsiDate = (date: string): string => {
+  return jMoment(date, 'YYYY-MM-DD').format('jYYYY/jMM/jDD')
 }
 </script>
 

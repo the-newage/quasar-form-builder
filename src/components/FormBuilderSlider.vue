@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-slider"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel"
@@ -16,15 +15,10 @@
 
     <q-slider
         ref="inputRef"
-        v-bind="qSliderAttrs"
+        v-bind="filteredAttrs"
         :model-value="model"
-        :name="name"
         :min="min"
         :max="max"
-        :disable="isDisabled"
-        :readonly="readonly"
-        :class="customClass"
-        :marker-labels-class="customClass"
         @update:model-value="model = $event ?? 0"
         @click="onClick"
     />
@@ -33,6 +27,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useAttrs } from 'vue'
+import { QSlider } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderSlider',
@@ -41,28 +36,20 @@ defineOptions({
 
 interface Props {
   modelValue?: number
-  customClass?: string
   outsideLabel?: string
   label?: string
-  name?: string
   min?: number
   max?: number
-  disabled?: boolean
-  readonly?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
       modelValue: 0,
-      customClass: '',
       outsideLabel: '',
       label: '',
-      name: '',
       min: 0,
-      max: 100,
-      disabled: false,
-      readonly: false
+      max: 100
     }
 )
 
@@ -74,11 +61,20 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 
-const inputRef = ref<any>(null)
-
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'outsideLabel', 'label', 'min', 'max'])
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const inputRef = ref<any>(null)
 
 const model = computed<number>({
   get: () => props.modelValue ?? 0,
@@ -87,57 +83,6 @@ const model = computed<number>({
     emit('update:modelValue', value)
     emit('change', value)
   }
-})
-
-const allowedQSliderAttrs = new Set([
-  'step',
-  'loading',
-
-  'vertical',
-  'reverse',
-
-  'color',
-  'trackColor',
-  'innerTrackColor',
-  'selectionColor',
-
-  'trackSize',
-  'thumbSize',
-
-  'markerLabels',
-  'markerLabelsClass',
-
-  'markers',
-  'markerLabels',
-
-  'label',
-  'labelColor',
-  'labelTextColor',
-
-  'switchLabelSide',
-
-  'snap',
-
-  'dark',
-
-  'dense',
-
-  'tabindex',
-
-  'readonly',
-  'disable'
-])
-
-const qSliderAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQSliderAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
 })
 
 const onClick = (event: MouseEvent) => {

@@ -8,7 +8,7 @@ export default defineConfig({
     vue(),
     dts({
       entryRoot: 'src',
-      outDir: 'types',
+      outDir: 'dist',
       insertTypesEntry: true,
       include: ['src/**/*.ts', 'src/**/*.vue'],
       rollupTypes: true
@@ -17,7 +17,7 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      'src': resolve(import.meta.dirname, './src'),
+      src: resolve(import.meta.dirname, './src'),
       '@': resolve(import.meta.dirname, './src')
     }
   },
@@ -26,7 +26,7 @@ export default defineConfig({
     lib: {
       entry: resolve(import.meta.dirname, './src/index.ts'),
       name: 'QuasarFormBuilder',
-      fileName: 'quasar-form-builder',
+      fileName: (format) => `quasar-form-builder.${format === 'es' ? 'js' : 'umd.cjs'}`,
       formats: ['es', 'umd']
     },
 
@@ -35,15 +35,22 @@ export default defineConfig({
         'vue',
         'quasar',
         'vue-form-builder-core',
-        'jalali-moment'
+        'jalali-moment',
+        '@vee-validate/rules'
       ],
 
       output: {
+        exports: 'named',
         globals: {
           vue: 'Vue',
           quasar: 'Quasar',
           'vue-form-builder-core': 'VueFormBuilderCore',
-          'jalali-moment': 'moment'
+          'jalali-moment': 'moment',
+          '@vee-validate/rules': 'VeeValidateRules'
+        },
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'style.css') return 'style.css'
+          return assetInfo.name
         }
       }
     }

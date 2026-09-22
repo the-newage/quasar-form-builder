@@ -1,7 +1,6 @@
 <template>
   <div
       class="form-builder-button"
-      :class="customClass"
   >
     <div
         v-if="outsideLabel"
@@ -12,9 +11,7 @@
 
     <q-btn
         ref="inputRef"
-        v-bind="qBtnAttrs"
-        :disable="isDisabled"
-        :class="customClass"
+        v-bind="filteredAttrs"
         @click="onClick"
     />
   </div>
@@ -25,6 +22,7 @@ import {
   computed,
   useAttrs
 } from 'vue'
+import { QBtn } from 'quasar'
 
 defineOptions({
   name: 'FormBuilderButton',
@@ -32,19 +30,13 @@ defineOptions({
 })
 
 interface Props {
-  customClass?: string
   outsideLabel?: string
-  disabled?: boolean
-  readonly?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
-      customClass: '',
-      outsideLabel: '',
-      disabled: false,
-      readonly: false
+      outsideLabel: ''
     }
 )
 
@@ -54,20 +46,21 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'type', 'outsideLabel'])
 })
 
-const qBtnAttrs = computed(() => {
-  return {
-    ...attrs
-    // تمام props مربوط به QBtn
-    // از طریق v-bind مستقیماً منتقل می‌شوند.
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
   }
-})
+  return result
+}
 
 const onClick = (event: Event) => {
-  if (isDisabled.value) {
+  if (attrs.disable) {
     return
   }
 

@@ -1,8 +1,5 @@
 <template>
-  <div
-      class="form-builder-time"
-      :class="customClass"
-  >
+  <div class="form-builder-time">
     <div
         v-if="outsideLabel"
         class="outside-label"
@@ -12,15 +9,10 @@
 
     <q-input
         ref="inputRef"
-        v-bind="qInputAttrs"
+        v-bind="filteredInputAttrs"
         :model-value="displayTime"
         readonly
         dir="ltr"
-        :disable="isDisabled"
-        :stack-label="!!placeholder"
-        :placeholder="placeholder"
-        :class="customClass"
-        :input-class="customClass"
         @click="onClickInput"
     >
       <template #append>
@@ -36,20 +28,18 @@
               transition-hide="scale"
           >
             <q-time
-                v-bind="qTimeAttrs"
-                :model-value="time"
+                v-bind="filteredTimeAttrs"
+                :model-value="internalTime"
                 mask="HH:mm:00"
                 format24h
-                :disable="isDisabled"
-                :readonly="readonly"
-                :title="title || label"
+                :title="pickerTitle"
                 :now-btn="nowBtn"
                 @update:model-value="onChangeTime"
             >
               <div class="row items-center justify-end">
                 <q-btn
                     v-close-popup
-                    label="بستن"
+                    label="Close"
                     color="primary"
                     flat
                 />
@@ -59,12 +49,12 @@
         </q-icon>
 
         <q-btn
-            v-if="clearable"
+            v-if="isClearable && !!modelValue"
             icon="close"
             flat
             round
             class="cursor-pointer"
-            @click="onClear"
+            @click.stop="onClear"
         />
       </template>
     </q-input>
@@ -72,7 +62,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useAttrs } from 'vue'
+import { computed, ref, useAttrs, watch } from 'vue'
+import { QInput, QTime, QIcon, QPopupProxy, QBtn, ClosePopup } from 'quasar'
+import { pad2, toZuluISOStringFromLocalParts } from '@/utils/dateTime'
 
 defineOptions({
   name: 'FormBuilderTime',
@@ -80,49 +72,21 @@ defineOptions({
 })
 
 interface Props {
-  modelValue?: string
-  customClass?: string
+  modelValue?: string | null
   outsideLabel?: string
-
-  name?: string
-
   clockIcon?: string
-
-  title?: string
-  placeholder?: string
-
-  label?: string
-
   nowBtn?: boolean
-
-  clearable?: boolean
-
-  disabled?: boolean
-  readonly?: boolean
+  zulu?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
-      modelValue: '',
-      customClass: '',
+      modelValue: null,
       outsideLabel: '',
-
-      name: '',
-
       clockIcon: 'access_time',
-
-      title: '',
-      placeholder: '',
-
-      label: '',
-
       nowBtn: false,
-
-      clearable: false,
-
-      disabled: false,
-      readonly: false
+      zulu: true
     }
 )
 
@@ -133,152 +97,137 @@ const emit = defineEmits<{
 }>()
 
 const attrs = useAttrs()
-
+const vClosePopup = ClosePopup
 const inputRef = ref<any>(null)
-
 const popupTime = ref(false)
+const internalTime = ref('') // همیشه نگه‌دارنده HH:mm:00 به وقت محلی برای نمایش در QTime
 
-const time = ref('')
+const isClearable = computed(() => attrs.clearable === true || attrs.clearable === '')
 
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
+const pickerTitle = computed(() => {
+  return (attrs.title as string) || (attrs.label as string) || props.outsideLabel || ''
 })
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const filteredInputAttrs = computed(() => {
+  return filterAttrs(attrs, [
+    'type',
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'clockIcon',
+    'outsideLabel',
+    'zulu',
+    'nowBtn'
+  ])
+})
+
+const filteredTimeAttrs = computed(() => {
+  return filterAttrs(attrs, [
+    'type',
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'clockIcon',
+    'outsideLabel',
+    'label',
+    'zulu'
+  ])
+})
+
+// استخراج ساعت محلی از ورودی (چه Zulu/ISO باشد، چه ساعت ساده HH:mm:ss)
+const parseTimeToLocal = (value: string | null | undefined): string => {
+  if (!value) return ''
+  const str = String(value).trim()
+
+  // اگر فرمت ایزو با Z یا T باشد
+  if (str.endsWith('Z') || str.includes('T')) {
+    const dt = new Date(str)
+    if (!isNaN(dt.getTime())) {
+      return `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}:${pad2(dt.getSeconds())}`
+    }
+  }
+
+  // اگر صرفا ساعت محلی فرستاده شده باشد
+  const parts = str.split(':')
+  if (parts.length >= 2) {
+    const hh = parts[0].padStart(2, '0')
+    const mm = parts[1].padStart(2, '0')
+    const ss = parts[2] ? parts[2].substring(0, 2).padStart(2, '0') : '00'
+    return `${hh}:${mm}:${ss}`
+  }
+
+  return ''
+}
 
 const displayTime = computed(() => {
-  if (!props.modelValue) {
-    return ''
-  }
-
-  return props.modelValue
-      .split(':')
-      .slice(0, 2)
-      .join(':')
+  if (!internalTime.value) return ''
+  return internalTime.value.split(':').slice(0, 2).join(':')
 })
 
-const allowedQInputAttrs = new Set([
-  'name',
-  'label',
+const syncFromModel = (val: string | null | undefined) => {
+  internalTime.value = parseTimeToLocal(val)
+}
 
-  'loading',
-  'filled',
-
-  'error',
-  'errorMessage',
-
-  'rules',
-  'lazyRules',
-
-  'outlined',
-  'borderless',
-  'standout',
-  'rounded',
-
-  'dense',
-
-  'hint',
-  'hideHint',
-  'hideBottomSpace',
-
-  'color',
-  'bgColor',
-  'labelColor',
-
-  'clearIcon',
-
-  'autocomplete',
-
-  'inputStyle'
-])
-
-const qInputAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQInputAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
-})
-
-const allowedQTimeAttrs = new Set([
-  'color',
-  'textColor',
-  'loading',
-
-  'dark',
-
-  'landscape',
-
-  'withSeconds',
-
-  'hourOptions',
-  'minuteOptions',
-  'secondOptions',
-
-  'hourOptions',
-  'minuteOptions',
-  'secondOptions',
-
-  'format24h',
-
-  'nowBtn',
-
-  'options',
-
-  'square',
-  'flat'
-])
-
-const qTimeAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQTimeAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
-})
+watch(
+    () => props.modelValue,
+    (val) => syncFromModel(val),
+    { immediate: true }
+)
 
 const onClickInput = (event: MouseEvent) => {
+  if (attrs.disable) return
   popupTime.value = true
   emit('click', event)
 }
 
 const onChangeTime = (newValue: string | null) => {
   if (!newValue) {
+    onClear()
     return
   }
-  time.value = newValue
 
-  const timeWithoutSecond = newValue
-      ? newValue.split(':').slice(0, 2).join(':')
-      : ''
+  const rawTime = String(newValue).substring(0, 8)
+  const fullTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime
+  internalTime.value = fullTime
 
-  const value = newValue || null
-
-  emit('update:modelValue', value)
-  emit('change', value)
-
-  // Keep the displayed value independent from the QTime mask.
-  if (!newValue) {
-    time.value = ''
-  } else {
-    time.value = newValue
+  if (props.zulu) {
+    const now = new Date()
+    const todayGregorian = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+    const zuluString = toZuluISOStringFromLocalParts(todayGregorian, fullTime)
+    emit('update:modelValue', zuluString)
+    emit('change', zuluString)
+    return
   }
+
+  emit('update:modelValue', fullTime)
+  emit('change', fullTime)
 }
 
 const onClear = () => {
   popupTime.value = false
-  time.value = ''
-
+  internalTime.value = ''
   emit('update:modelValue', null)
   emit('change', null)
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+.form-builder-time {
+  .outside-label {
+    margin-bottom: 4px;
+  }
+}
 </style>

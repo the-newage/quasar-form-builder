@@ -1,9 +1,12 @@
+import { computed, inject } from 'vue'
 import { all as allVeeValidations } from '@vee-validate/rules'
 
 export interface ValidationConfig {
     i18n?: (key: string, named?: Record<string, string>) => string;
     customRules?: Record<string, (value: any, params?: any[]) => boolean | string>;
 }
+
+export const FORM_VALIDATOR_KEY = Symbol('FormValidator')
 
 export const createFormBuilderValidation = (config: ValidationConfig = {}) => {
     const allValidations: Record<string, any> = {
@@ -150,4 +153,21 @@ export const createFormBuilderValidation = (config: ValidationConfig = {}) => {
     return {
         parseRules
     }
+}
+
+export function useInputRules(props: { rules?: any, label?: string }) {
+
+    const validator = inject<ReturnType<typeof createFormBuilderValidation>>(FORM_VALIDATOR_KEY)
+
+    const parsedRules = computed(() => {
+        if (!validator) return props.rules || []
+
+        // اگر رول استرینگ بود پارس کن، اگر نبود همون رو برگردون
+        if (typeof props.rules === 'string') {
+            return validator.parseRules(props.rules, props.label || '')
+        }
+        return props.rules || []
+    })
+
+    return { parsedRules }
 }

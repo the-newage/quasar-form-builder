@@ -1,13 +1,12 @@
 <template>
-  <div class="form-builder-file" :class="customClass">
+  <div class="form-builder-file">
     <div v-if="outsideLabel" class="outside-label">{{ outsideLabel }}</div>
     <q-file
         ref="inputRef"
         :id="inputUid"
-        v-bind="qFileAttrs"
+        v-bind="filteredAttrs"
         :model-value="qFileModel"
         @update:model-value="qFileModel = $event"
-        :class="[customClass, 'custom-file-input']"
         @clear="onClear"
         @click="onClick"
     />
@@ -44,9 +43,10 @@
 
 <script setup lang="ts">
 import { computed, ref, useAttrs } from 'vue'
-import { uid } from 'quasar'
+import { uid, QFile, QImg, QIcon } from 'quasar'
 
 defineOptions({
+  name: 'FormBuilderFile',
   inheritAttrs: false
 })
 
@@ -57,10 +57,38 @@ type PreviewKind = 'photo' | 'audio' | 'pdf' | 'office/word' | 'office/excel' | 
 
 interface Props {
   caption?: string
-  customClass?: string
   modelValue?: FileModelValue
   outsideLabel?: string
 }
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: null,
+  outsideLabel: '',
+  caption: ''
+})
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: FileValue | File[] | null): void
+  (e: 'click'): void
+}>()
+
+const attrs = useAttrs()
+
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, ['class', 'style', 'id', 'modelValue', 'onUpdate:modelValue', 'caption', 'outsideLabel'])
+})
+
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
+  const result: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
+  }
+  return result
+}
+
+const inputUid = ref(uid())
+const inputRef = ref<any>(null)
 
 interface PreviewItem {
   key: string
@@ -69,61 +97,6 @@ interface PreviewItem {
   src?: string
   name: string
 }
-
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  (e: 'update:modelValue', value: FileValue | File[] | null): void
-  (e: 'click'): void
-}>()
-
-const inputUid = ref(uid())
-const inputRef = ref<any>(null)
-
-const allowedQFileAttrs = new Set([
-  'accept',
-  'multiple',
-  'loading',
-  'clearable',
-  'filled',
-  'outlined',
-  'borderless',
-  'standout',
-  'dense',
-  'disable',
-  'readonly',
-  'rules',
-  'hint',
-  'hideHint',
-  'hideBottomSpace',
-  'counter',
-  'maxFiles',
-  'maxFileSize',
-  'useChips',
-  'label',
-  'placeholder',
-  'stackLabel',
-  'color',
-  'bgColor',
-  'labelColor',
-  'error',
-  'errorMessage',
-  'name'
-])
-
-const attrs = useAttrs()
-
-const qFileAttrs = computed(() => {
-  const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQFileAttrs.has(key)) {
-      result[key] = value
-    }
-  }
-
-  return result
-})
 
 const isFile = (val: unknown): val is File =>
     typeof File !== 'undefined' && val instanceof File

@@ -1,8 +1,5 @@
 <template>
-  <div
-      class="form-builder-input"
-      :class="customClass"
-  >
+  <div class="form-builder-input">
     <div
         v-if="outsideLabel"
         class="outside-label"
@@ -12,12 +9,10 @@
 
     <q-input
         ref="inputRef"
-        v-bind="qInputAttrs"
+        v-bind="filteredAttrs"
         :model-value="model"
         :type="inputType"
-        :disable="isDisabled"
-        :class="customClass"
-        :input-class="customClass"
+        :rules="parsedRules"
         @update:model-value="model = $event"
         @click="onClick"
         @keypress="onKeyPress"
@@ -26,7 +21,9 @@
 </template>
 
 <script setup lang="ts">
+import { QInput } from 'quasar'
 import { computed, useAttrs, ref } from 'vue'
+import { useInputRules } from '@/composables/useInputRules'
 
 defineOptions({
   name: 'FormBuilderInput',
@@ -37,11 +34,9 @@ type InputValue = string | number | null
 
 interface Props {
   modelValue?: InputValue
-
-  customClass?: string
-
   outsideLabel?: string
-
+  label?: string
+  rules?: any
   inputType?:
       | 'text'
       | 'password'
@@ -56,47 +51,22 @@ interface Props {
       | 'date'
       | 'datetime-local'
 
-  autogrow?: boolean
-
   preventPersian?: boolean
   preventEnglish?: boolean
   justNumber?: boolean
-
-  mask?: string
-  fillMask?: string
-  reverseFillMask?: boolean
-
-  maxlength?: string | number
-  hint?: string
-
-  disabled?: boolean
-  readonly?: boolean
 }
 
 const props = withDefaults(
     defineProps<Props>(),
     {
       modelValue: '',
-      customClass: '',
       outsideLabel: '',
-
+      label: '',
+      rules: () => [],
       inputType: 'text',
-
-      autogrow: false,
-
       preventPersian: false,
       preventEnglish: false,
-      justNumber: false,
-
-      mask: undefined,
-      fillMask: undefined,
-      reverseFillMask: undefined,
-
-      maxlength: undefined,
-      hint: undefined,
-
-      disabled: false,
-      readonly: false
+      justNumber: false
     }
 )
 
@@ -109,101 +79,39 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 
+// استفاده از composable جهت پارس کردن رول‌های استرینگ به متدهای Quasar
+const { parsedRules } = useInputRules({
+  rules: props.rules,
+  label: props.label || props.outsideLabel
+})
+
+const filteredAttrs = computed(() => {
+  return filterAttrs(attrs, [
+    'class',
+    'style',
+    'id',
+    'modelValue',
+    'onUpdate:modelValue',
+    'inputType',
+    'preventPersian',
+    'preventEnglish',
+    'justNumber',
+    'outsideLabel',
+    'rules',
+    'label'
+  ])
+})
+
 const inputRef = ref<any>(null)
 
-/**
- * Attributes that can be passed directly to QInput.
- *
- * Component-specific props such as:
- *   inputType
- *   preventPersian
- *   preventEnglish
- *   justNumber
- *   outsideLabel
- *
- * are intentionally not forwarded.
- */
-const allowedQInputAttrs = new Set([
-  'name',
-  'loading',
-
-  'filled',
-  'outlined',
-  'borderless',
-  'standout',
-  'rounded',
-
-  'label',
-  'stackLabel',
-  'placeholder',
-
-  'rules',
-  'lazyRules',
-
-  'error',
-  'errorMessage',
-
-  'hint',
-
-  'disable',
-  'readonly',
-
-  'mask',
-  'fillMask',
-  'reverseFillMask',
-
-  'clearable',
-
-  'loading',
-
-  'autogrow',
-  'maxlength',
-
-  'dense',
-
-  'color',
-  'bgColor',
-  'labelColor',
-
-  'hideHint',
-  'hideBottomSpace',
-
-  'counter',
-
-  'prefix',
-  'suffix',
-
-  'debounce',
-
-  'clearIcon',
-
-  'bottomSlots',
-
-  'inputClass',
-  'inputStyle',
-
-  'autocomplete',
-
-  'autofocus',
-
-  'tabindex'
-])
-
-const qInputAttrs = computed(() => {
+function filterAttrs(obj: Record<string, unknown>, exclude: string[]) {
+  const forbidden = new Set(exclude)
   const result: Record<string, unknown> = {}
-
-  for (const [key, value] of Object.entries(attrs)) {
-    if (allowedQInputAttrs.has(key)) {
-      result[key] = value
-    }
+  for (const [key, val] of Object.entries(obj)) {
+    if (!forbidden.has(key)) result[key] = val
   }
-
   return result
-})
-
-const isDisabled = computed(() => {
-  return props.disabled || props.readonly
-})
+}
 
 const model = computed<InputValue>({
   get: () => props.modelValue ?? '',
